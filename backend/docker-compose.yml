@@ -26,12 +26,12 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@db:5432/${POSTGRES_DB:-agentic_workflow}
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-in-production}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60 * 24 * 7}
     depends_on:
       db:
         condition: service_healthy

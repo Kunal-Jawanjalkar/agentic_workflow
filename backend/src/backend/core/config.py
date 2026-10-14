@@ -16,19 +16,9 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    database_url: str = Field(
-        default="postgresql://app:app@localhost:5432/agentic_workflow",
-        alias="DATABASE_URL",
-    )
-    secret_key: str = Field(
-        default="dev-secret-change-in-production",
-        alias="SECRET_KEY",
-    )
-    access_token_expire_minutes: int = Field(
-        default=60 * 24 * 7,
-        alias="ACCESS_TOKEN_EXPIRE_MINUTES",
-    )
-    jwt_algorithm: str = "HS256"
+    database_url: str = Field(alias="DATABASE_URL")
+    secret_key: str = Field(alias="SECRET_KEY")
+    access_token_expire_minutes: int = Field(alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     @property
     def sqlalchemy_database_url(self) -> str:

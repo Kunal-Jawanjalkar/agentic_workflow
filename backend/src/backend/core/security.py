@@ -8,6 +8,8 @@ from pwdlib.hashers.bcrypt import BcryptHasher
 
 from backend.core.config import get_settings
 
+JWT_ALGORITHM = "HS256"
+
 password_hash = PasswordHash((BcryptHasher(),))
 
 
@@ -28,5 +30,5 @@ def create_access_token(subject: UUID, extra_claims: dict[str, Any] | None = Non
     return jwt.encode(
         payload,
         settings.secret_key,
-        algorithm=settings.jwt_algorithm,
+        algorithm=JWT_ALGORITHM,
     )
