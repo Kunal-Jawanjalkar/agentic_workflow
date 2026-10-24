@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
+import { ThemeToggle } from '@/components/app/ThemeToggle'
+
 type AuthPageShellProps = {
   title: string
   description: string
@@ -15,7 +17,10 @@ export function AuthPageShell({
   footer,
 }: AuthPageShellProps) {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center bg-muted/40 px-4 py-12">
+    <div className="relative flex min-h-svh flex-col items-center justify-center bg-muted/40 px-4 py-12">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle iconOnly menuPlacement="bottom" />
+      </div>
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-1 text-center">
           <Link

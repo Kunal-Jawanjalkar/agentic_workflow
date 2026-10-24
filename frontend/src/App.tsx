@@ -1,9 +1,13 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { WorkflowLayout } from '@/components/app/WorkflowLayout'
+import { AppLayout } from '@/components/app/AppLayout'
+import { WorkflowEditorPage } from '@/components/app/WorkflowLayout'
+import { PlaceholderPage } from '@/features/app/PlaceholderPage'
 import { GuestRoute } from '@/features/auth/GuestRoute'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
 import { RegisterPage } from '@/features/auth/RegisterPage'
+import { HomePage } from '@/features/home/HomePage'
+import { SettingsPage } from '@/features/settings/SettingsPage'
 
 function App() {
   return (
@@ -13,10 +17,18 @@ function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <WorkflowLayout />
+              <AppLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<HomePage />} />
+          <Route path="workflows" element={<WorkflowEditorPage />} />
+          <Route path="runs" element={<PlaceholderPage title="Runs" />} />
+          <Route path="approvals" element={<PlaceholderPage title="Approvals" />} />
+          <Route path="evals" element={<PlaceholderPage title="Evals" />} />
+          <Route path="credentials" element={<PlaceholderPage title="Credentials" />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
         <Route
           path="/login"
           element={

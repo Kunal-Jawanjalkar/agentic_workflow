@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
+import { ThemeProvider } from '@/providers/ThemeProvider'
+
 export function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -13,7 +15,9 @@ export function createTestQueryClient() {
 export function createQueryWrapper(queryClient = createTestQueryClient()) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      </ThemeProvider>
     )
   }
 }
