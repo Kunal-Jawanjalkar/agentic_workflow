@@ -2,20 +2,27 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.v1.router import api_router
-from backend.db.base import Base
-from backend.db.session import engine
-from backend.models import User  # noqa: F401 — register models with metadata
+from backend.core.config import get_settings
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    Base.metadata.create_all(bind=engine)
     yield
 
 
 app = FastAPI(title="Backend API", lifespan=lifespan)
+
+settings = get_settings()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(api_router)
 

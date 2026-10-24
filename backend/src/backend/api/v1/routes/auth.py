@@ -1,14 +1,17 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from backend.core.cookies import clear_access_token_cookie, set_access_token_cookie
+from backend.core.deps import CurrentUser
 from backend.core.security import create_access_token, hash_password, verify_password
 from backend.db.session import get_db
 from backend.models.user import User
-from backend.schemas.auth import AuthResponse, LoginRequest, RegisterRequest, UserPublic
+from backend.schemas.auth import LoginRequest, LoginResponse, RegisterRequest, UserPublic
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -40,8 +43,8 @@ def register(body: RegisterRequest, db: DbSession) -> User:
     return user
 
 
-@router.post("/login", response_model=AuthResponse)
-def login(body: LoginRequest, db: DbSession) -> AuthResponse:
+@router.post("/login", response_model=LoginResponse)
+def login(body: LoginRequest, db: DbSession) -> JSONResponse:
     user = db.scalar(select(User).where(User.email == body.email.lower()))
     if user is None or not verify_password(body.password, user.hashed_password):
         raise HTTPException(
@@ -51,7 +54,19 @@ def login(body: LoginRequest, db: DbSession) -> AuthResponse:
         )
 
     token = create_access_token(user.id)
-    return AuthResponse(
-        access_token=token,
-        user=UserPublic.model_validate(user),
-    )
+    payload = LoginResponse(user=UserPublic.model_validate(user))
+    response = JSONResponse(content=payload.model_dump(mode="json"))
+    set_access_token_cookie(response, token)
+    return response
+
+
+@router.get("/me", response_model=UserPublic)
+def me(current_user: CurrentUser) -> User:
+    return current_user
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout() -> Response:
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    clear_access_token_cookie(response)
+    return response

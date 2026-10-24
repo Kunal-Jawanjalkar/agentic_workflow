@@ -7,6 +7,7 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "alembic>=1.20.0",
     "email-validator>=2.3.0",
     "fastapi>=0.143.0",
     "psycopg[binary]>=3.3.6",
@@ -29,3 +30,12 @@ venvPath = "."
 venv = ".venv"
 extraPaths = ["src"]
 pythonVersion = "3.14"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+]
