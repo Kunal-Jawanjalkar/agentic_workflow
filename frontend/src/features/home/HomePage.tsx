@@ -1,4 +1,5 @@
 import { AlertTriangle, Hand, MoreHorizontal, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -28,7 +29,7 @@ export function HomePage() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">{getGreeting()}</h1>
         <div className="flex items-center gap-2">
-          <Button type="button" className="gap-1.5">
+          <Button type="button" className="gap-1.5" render={<Link to="/workflows/new" />}>
             <Plus className="size-4" />
             New workflow
           </Button>

@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/components/app/AppLayout'
 import { WorkflowEditorPage } from '@/components/app/WorkflowLayout'
+import { WorkflowsPage } from '@/features/workflows/WorkflowsPage'
 import { PlaceholderPage } from '@/features/app/PlaceholderPage'
 import { GuestRoute } from '@/features/auth/GuestRoute'
 import { LoginPage } from '@/features/auth/LoginPage'
@@ -22,7 +23,9 @@ function App() {
           }
         >
           <Route index element={<HomePage />} />
-          <Route path="workflows" element={<WorkflowEditorPage />} />
+          <Route path="workflows" element={<WorkflowsPage />} />
+          <Route path="workflows/new" element={<WorkflowEditorPage />} />
+          <Route path="workflows/:workflowId" element={<WorkflowEditorPage />} />
           <Route path="runs" element={<PlaceholderPage title="Runs" />} />
           <Route path="approvals" element={<PlaceholderPage title="Approvals" />} />
           <Route path="evals" element={<PlaceholderPage title="Evals" />} />

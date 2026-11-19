@@ -11,7 +11,7 @@ export function AppLayout() {
         <div className="flex h-11 shrink-0 items-center border-b border-border/60 px-3 md:hidden">
           <SidebarTrigger className="text-muted-foreground" />
         </div>
-        <main className="min-h-0 flex-1 overflow-auto">
+        <main className="relative min-h-0 flex-1 overflow-auto">
           <Outlet />
         </main>
       </SidebarInset>

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 
 import { HomePage } from './HomePage'
 
@@ -9,7 +10,11 @@ vi.mock('@/features/home/get-greeting', () => ({
 
 describe('HomePage', () => {
   it('renders dashboard sections from mock data', () => {
-    render(<HomePage />)
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>,
+    )
 
     expect(screen.getByRole('heading', { name: 'Good morning' })).toBeInTheDocument()
     expect(screen.getByText('Runs today')).toBeInTheDocument()
@@ -20,6 +25,9 @@ describe('HomePage', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Recent runs' })).toBeInTheDocument()
     expect(screen.getAllByText('Lead scoring').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByRole('button', { name: 'New workflow' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'New workflow' })).toHaveAttribute(
+      'href',
+      '/workflows/new',
+    )
   })
 })
