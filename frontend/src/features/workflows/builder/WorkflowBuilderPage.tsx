@@ -12,7 +12,7 @@ import {
   supportTriageEdges,
   supportTriageNodes,
 } from '@/features/workflows/builder/support-triage-graph'
-import type { BuilderNodeData, LlmNodeConfig, NodeType } from '@/features/workflows/builder/types'
+import type { BuilderNodeData, NodeType } from '@/features/workflows/builder/types'
 import { WorkflowBuilderCanvas } from '@/features/workflows/builder/WorkflowBuilderCanvas'
 import { WorkflowBuilderHeader } from '@/features/workflows/builder/WorkflowBuilderHeader'
 
@@ -66,19 +66,22 @@ function WorkflowBuilderInner() {
     [selectedNodeId, setEdges, setNodes],
   )
 
-  const onUpdateLlmConfig = useCallback(
-    (nodeId: string, patch: Partial<LlmNodeConfig>) => {
+  const onUpdateNodeConfig = useCallback(
+    (nodeId: string, patch: Record<string, unknown>) => {
       setNodes((current) =>
         current.map((node) => {
-          if (node.id !== nodeId || node.data.type !== 'llm') {
+          if (node.id !== nodeId) {
             return node
           }
           return {
             ...node,
             data: {
               ...node.data,
-              config: { ...node.data.config, ...patch },
-            },
+              config: {
+                ...(node.data.config as Record<string, unknown>),
+                ...patch,
+              },
+            } as BuilderNodeData,
           }
         }),
       )
@@ -107,7 +110,7 @@ function WorkflowBuilderInner() {
             onSelectNode={setSelectedNodeId}
           />
         </div>
-        <NodeInspectorPanel node={selectedNode} onUpdateLlmConfig={onUpdateLlmConfig} />
+        <NodeInspectorPanel node={selectedNode} onUpdateConfig={onUpdateNodeConfig} />
       </div>
     </div>
   )

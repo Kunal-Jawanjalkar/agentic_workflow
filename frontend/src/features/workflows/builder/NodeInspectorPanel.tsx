@@ -1,11 +1,12 @@
 import type { Node } from '@xyflow/react'
 
-import { Button } from '@/components/ui/button'
-import type { BuilderNodeData, LlmNodeConfig } from '@/features/workflows/builder/types'
+import { ConfigSchemaFields } from '@/features/workflows/builder/ConfigSchemaFields'
+import { useNodeTypes } from '@/features/workflows/builder/hooks'
+import type { BuilderNodeData } from '@/features/workflows/builder/types'
 
 type NodeInspectorPanelProps = {
   node: Node<BuilderNodeData> | null
-  onUpdateLlmConfig: (nodeId: string, patch: Partial<LlmNodeConfig>) => void
+  onUpdateConfig: (nodeId: string, patch: Record<string, unknown>) => void
 }
 
 const kindLabels: Record<BuilderNodeData['type'], string> = {
@@ -18,11 +19,9 @@ const kindLabels: Record<BuilderNodeData['type'], string> = {
   notify: 'Notify node',
 }
 
-function FieldLabel({ children }: { children: string }) {
-  return <label className="text-xs font-medium text-muted-foreground">{children}</label>
-}
+export function NodeInspectorPanel({ node, onUpdateConfig }: NodeInspectorPanelProps) {
+  const { data: catalog, isPending, isError } = useNodeTypes()
 
-export function NodeInspectorPanel({ node, onUpdateLlmConfig }: NodeInspectorPanelProps) {
   if (!node) {
     return (
       <aside
@@ -35,8 +34,7 @@ export function NodeInspectorPanel({ node, onUpdateLlmConfig }: NodeInspectorPan
   }
 
   const { data } = node
-  const isLlm = data.type === 'llm'
-  const llmConfig = isLlm ? data.config : null
+  const nodeType = catalog?.node_types.find((item) => item.type === data.type)
 
   return (
     <aside
@@ -49,71 +47,25 @@ export function NodeInspectorPanel({ node, onUpdateLlmConfig }: NodeInspectorPan
       </div>
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-        {isLlm && llmConfig ? (
-          <>
-            <div className="space-y-1.5">
-              <FieldLabel>API key</FieldLabel>
-              <select
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm dark:bg-input/30"
-                value={llmConfig.credential_label}
-                onChange={(event) =>
-                  onUpdateLlmConfig(node.id, { credential_label: event.target.value })
-                }
-              >
-                <option value="">Select a key</option>
-                <option value="My OpenAI key (…)">My OpenAI key (…)</option>
-                <option value="Team Anthropic key">Team Anthropic key</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <FieldLabel>Model</FieldLabel>
-              <select
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm dark:bg-input/30"
-                value={llmConfig.model}
-                onChange={(event) => onUpdateLlmConfig(node.id, { model: event.target.value })}
-              >
-                <option value="">Select a model</option>
-                <option value="gpt-4o-mini">gpt-4o-mini</option>
-                <option value="gpt-4o">gpt-4o</option>
-                <option value="claude-sonnet">claude-sonnet</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <FieldLabel>Prompt</FieldLabel>
-              <textarea
-                className="min-h-28 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm dark:bg-input/30"
-                value={llmConfig.prompt}
-                onChange={(event) => onUpdateLlmConfig(node.id, { prompt: event.target.value })}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <FieldLabel>Structured output</FieldLabel>
-              <Button
-                type="button"
-                size="sm"
-                variant={llmConfig.structured_output ? 'secondary' : 'outline'}
-                onClick={() =>
-                  onUpdateLlmConfig(node.id, {
-                    structured_output: !llmConfig.structured_output,
-                  })
-                }
-              >
-                {llmConfig.structured_output ? 'On' : 'Off'}
-              </Button>
-            </div>
-          </>
-        ) : (
+        {isPending ? (
+          <p className="text-sm text-muted-foreground">Loading configuration schema…</p>
+        ) : null}
+        {isError ? (
+          <p className="text-sm text-destructive">Could not load node types.</p>
+        ) : null}
+        {nodeType ? (
+          <ConfigSchemaFields
+            configSchema={nodeType.config_schema}
+            config={data.config as Record<string, unknown>}
+            onPatch={(patch) => onUpdateConfig(node.id, patch)}
+          />
+        ) : null}
+        {!isPending && !isError && !nodeType ? (
           <p className="text-sm text-muted-foreground">
-            Configuration for {kindLabels[data.type].toLowerCase()}s is coming soon.
+            No schema found for {kindLabels[data.type].toLowerCase()}.
           </p>
-        )}
+        ) : null}
       </div>
-
-      {isLlm ? (
-        <p className="border-t border-border/60 px-4 py-3 text-xs text-muted-foreground">
-          Last test: $0.0009, 1.2s
-        </p>
-      ) : null}
     </aside>
   )
 }

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { appendWorkflowStep, triggerAllowsConnection, workflowHasTrigger } from './append-workflow-step'
+import {
+  appendTailNode,
+  appendWorkflowStep,
+  triggerAllowsConnection,
+  workflowHasTrigger,
+} from './append-workflow-step'
 import type { NodeType } from './types'
 
 const llmSchema: NodeType = {
@@ -132,11 +137,13 @@ describe('appendWorkflowStep', () => {
         target: 'llm-1',
         type: 'smoothstep',
         pathOptions: { borderRadius: 16 },
+        style: { strokeWidth: 2 },
+        markerEnd: { type: 'arrowclosed', width: 16, height: 16 },
       },
     ])
   })
 
-  it('keeps a single outgoing edge on the trigger', () => {
+  it('inserts a new node between the selected node and its child', () => {
     const trigger = appendWorkflowStep([], [], {
       id: 'trigger-1',
       nodeType: triggerSchema,
@@ -153,7 +160,13 @@ describe('appendWorkflowStep', () => {
     })
 
     expect(graph.edges.filter((edge) => edge.source === 'trigger-1')).toHaveLength(1)
-    expect(graph.edges[1]).toMatchObject({ source: 'llm-1', target: 'notify-1' })
+    expect(graph.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ source: 'trigger-1', target: 'notify-1' }),
+        expect.objectContaining({ source: 'notify-1', target: 'llm-1' }),
+      ]),
+    )
+    expect(graph.nodes.find((node) => node.id === 'llm-1')?.position.y).toBe(48 + 128 + 128)
     expect(
       triggerAllowsConnection(graph.nodes, graph.edges, {
         source: 'trigger-1',
@@ -193,6 +206,8 @@ describe('appendWorkflowStep', () => {
         label: 'yes',
         type: 'smoothstep',
         pathOptions: { borderRadius: 16 },
+        style: { strokeWidth: 2 },
+        markerEnd: { type: 'arrowclosed', width: 16, height: 16 },
       },
       {
         id: 'condition-1-http-no',
@@ -202,6 +217,8 @@ describe('appendWorkflowStep', () => {
         label: 'no',
         type: 'smoothstep',
         pathOptions: { borderRadius: 16 },
+        style: { strokeWidth: 2 },
+        markerEnd: { type: 'arrowclosed', width: 16, height: 16 },
       },
     ])
     expect(graph.nodes[1]?.position).toEqual({ x: 280 + 240, y: 48 })
@@ -234,5 +251,103 @@ describe('appendWorkflowStep', () => {
       target: 'llm-1',
     })
     expect(graph.edges[2]?.sourceHandle).toBeUndefined()
+  })
+
+  it('appends after the graph tail when no node is selected', () => {
+    const trigger = appendWorkflowStep([], [], {
+      id: 'trigger-1',
+      nodeType: triggerSchema,
+    })
+    const withLlm = appendWorkflowStep(trigger.nodes, trigger.edges, {
+      id: 'llm-1',
+      nodeType: llmSchema,
+      selectedNodeId: 'trigger-1',
+    })
+    const graph = appendWorkflowStep(withLlm.nodes, withLlm.edges, {
+      id: 'notify-1',
+      nodeType: notifySchema,
+      selectedNodeId: null,
+    })
+
+    expect(graph.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ source: 'llm-1', target: 'notify-1' }),
+      ]),
+    )
+    expect(graph.edges.some((edge) => edge.source === 'trigger-1' && edge.target === 'notify-1')).toBe(
+      false,
+    )
+  })
+
+  it('prefers the last sink in node order for an unselected append', () => {
+    const condition = appendWorkflowStep([], [], {
+      id: 'condition-1',
+      nodeType: conditionSchema,
+    })
+    const yesBranch = appendWorkflowStep(condition.nodes, condition.edges, {
+      id: 'notify-yes',
+      nodeType: notifySchema,
+      selectedNodeId: 'condition-1',
+    })
+    const both = appendWorkflowStep(yesBranch.nodes, yesBranch.edges, {
+      id: 'http-no',
+      nodeType: { ...notifySchema, type: 'http', label: 'HTTP' },
+      selectedNodeId: 'notify-yes',
+    })
+
+    expect(appendTailNode(both.nodes, both.edges)?.id).toBe('http-no')
+
+    const graph = appendWorkflowStep(both.nodes, both.edges, {
+      id: 'llm-1',
+      nodeType: llmSchema,
+      selectedNodeId: null,
+    })
+
+    expect(graph.edges).toEqual(
+      expect.arrayContaining([expect.objectContaining({ source: 'http-no', target: 'llm-1' })]),
+    )
+  })
+
+  it('splices between a selected middle node and its downstream step', () => {
+    const trigger = appendWorkflowStep([], [], {
+      id: 'trigger-1',
+      nodeType: triggerSchema,
+    })
+    const withLlm = appendWorkflowStep(trigger.nodes, trigger.edges, {
+      id: 'llm-1',
+      nodeType: llmSchema,
+      selectedNodeId: 'trigger-1',
+    })
+    const withNotify = appendWorkflowStep(withLlm.nodes, withLlm.edges, {
+      id: 'notify-1',
+      nodeType: notifySchema,
+      selectedNodeId: 'llm-1',
+    })
+    const graph = appendWorkflowStep(withNotify.nodes, withNotify.edges, {
+      id: 'agent-1',
+      nodeType: {
+        ...llmSchema,
+        type: 'agent',
+        label: 'Agent',
+        config_schema: {
+          properties: {
+            credential_label: { type: 'string', default: '' },
+            model: { type: 'string', default: 'gpt-4o-mini' },
+            system_prompt: { type: 'string', default: '' },
+            tools: { type: 'array', items: { type: 'string' } },
+          },
+          type: 'object',
+        },
+      },
+      selectedNodeId: 'llm-1',
+    })
+
+    expect(graph.edges.filter((edge) => edge.source === 'llm-1')).toHaveLength(1)
+    expect(graph.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ source: 'llm-1', target: 'agent-1' }),
+        expect.objectContaining({ source: 'agent-1', target: 'notify-1' }),
+      ]),
+    )
   })
 })

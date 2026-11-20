@@ -4,7 +4,7 @@ from backend.nodes.base import BaseNode, NodeFn
 
 
 class TriggerConfig(BaseModel):
-    trigger_type: str = Field(default="manual", description="manual | webhook | schedule")
+    trigger_type: str = Field(default="manual", description=["manual", "webhook", "schedule"])
 
 
 class TriggerNode(BaseNode):

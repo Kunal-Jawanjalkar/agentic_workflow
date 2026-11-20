@@ -1,0 +1,22 @@
+---
+description: After editing a file, check it for errors and fix them before writing more code.
+alwaysApply: true
+---
+
+# Check errors before the next edit
+
+After you write or change a file, check that file for errors and fix them before editing another file or adding the next piece of code.
+
+## What to check
+
+- IDE diagnostics on the file you just changed (linter and type errors).
+- Frontend (`frontend/`): `npx eslint` on the changed files. Run `npx tsc -b --pretty false` when the change can affect types.
+- Backend (`backend/`): Pyright diagnostics on the changed files.
+
+## Order
+
+1. Edit one file (or one tightly related pair, such as a module and its test).
+2. Read the diagnostics and fix every error you introduced.
+3. Only then write the next file.
+
+Do not stack further edits on a file that still has an error from the last change.

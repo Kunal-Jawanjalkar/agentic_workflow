@@ -55,4 +55,19 @@ describe('WorkflowBuilderNode', () => {
     expect(container.querySelector('.react-flow__handle-top')).toBeNull()
     expect(container.querySelector('.react-flow__handle-bottom')).not.toBeNull()
   })
+
+  it('hides the incoming handle so the arrow meets the node without a dot', () => {
+    const { container } = renderNode({
+      label: 'LLM',
+      type: 'llm',
+      version: 1,
+      config: { credential_label: '', model: '', prompt: '', structured_output: false },
+    })
+
+    const incoming = container.querySelector('.react-flow__handle-top')
+
+    expect(incoming).not.toBeNull()
+    expect(incoming).toHaveClass('!opacity-0')
+    expect(container.querySelector('.react-flow__handle-bottom')).not.toBeNull()
+  })
 })

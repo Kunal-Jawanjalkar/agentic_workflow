@@ -1,7 +1,7 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { memo } from 'react'
 
-import { nodeKindIcon } from '@/features/workflows/builder/node-icons'
+import { nodeKindIcons } from '@/features/workflows/builder/node-icons'
 import type { BuilderNodeData } from '@/features/workflows/builder/types'
 import { cn } from '@/lib/utils'
 
@@ -12,7 +12,7 @@ function WorkflowBuilderNodeComponent({
   const isTrigger = data.type === 'trigger'
   const isApproval = data.type === 'approval'
   const isCondition = data.type === 'condition'
-  const Icon = nodeKindIcon(data.type)
+  const Icon = nodeKindIcons[data.type]
 
   return (
     <div
@@ -25,7 +25,11 @@ function WorkflowBuilderNodeComponent({
       )}
     >
       {isTrigger ? null : (
-        <Handle type="target" position={Position.Top} className="!bg-muted-foreground !w-2 !h-2" />
+        <Handle
+          type="target"
+          position={Position.Top}
+          className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
+        />
       )}
       <span className="flex items-center justify-center gap-1.5">
         <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
@@ -54,7 +58,3 @@ function WorkflowBuilderNodeComponent({
 }
 
 export const WorkflowBuilderNode = memo(WorkflowBuilderNodeComponent)
-
-export const workflowBuilderNodeTypes = {
-  workflow: WorkflowBuilderNode,
-}

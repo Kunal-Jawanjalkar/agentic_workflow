@@ -17,7 +17,7 @@ import {
   workflowEdgeOptions,
 } from '@/features/workflows/builder/append-workflow-step'
 import { CanvasEmptyState } from '@/features/workflows/builder/CanvasEmptyState'
-import { workflowBuilderNodeTypes } from '@/features/workflows/builder/WorkflowBuilderNode'
+import { workflowBuilderNodeTypes } from '@/features/workflows/builder/workflow-builder-node-types'
 import type { BuilderNodeData } from '@/features/workflows/builder/types'
 
 type WorkflowBuilderCanvasProps = {

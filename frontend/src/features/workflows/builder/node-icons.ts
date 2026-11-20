@@ -22,7 +22,7 @@ const iconsByName: Record<string, LucideIcon> = {
   bell: Bell,
 }
 
-const iconsByKind: Record<BuilderNodeKind, LucideIcon> = {
+export const nodeKindIcons: Record<BuilderNodeKind, LucideIcon> = {
   trigger: Zap,
   llm: Sparkles,
   agent: Bot,
@@ -39,7 +39,7 @@ export function nodeTypeIcon(icon: string): LucideIcon {
 }
 
 export function nodeKindIcon(kind: BuilderNodeKind): LucideIcon {
-  return iconsByKind[kind]
+  return nodeKindIcons[kind]
 }
 
 export function formatNodeCategory(category: string): string {

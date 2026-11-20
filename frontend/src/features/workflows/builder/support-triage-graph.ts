@@ -1,5 +1,6 @@
 import type { Edge, Node } from '@xyflow/react'
 
+import { workflowEdgeOptions } from './append-workflow-step'
 import type { BuilderNodeData, LlmNodeConfig } from './types'
 
 const classifyConfig: LlmNodeConfig = {
@@ -90,10 +91,24 @@ export const supportTriageNodes: Node<BuilderNodeData>[] = [
 ]
 
 export const supportTriageEdges: Edge[] = [
-  { id: 'e-webhook-classify', source: 'webhook', target: 'classify-ticket', type: 'smoothstep' },
-  { id: 'e-classify-urgent', source: 'classify-ticket', target: 'is-urgent', type: 'smoothstep' },
-  { id: 'e-urgent-alert', source: 'is-urgent', target: 'alert', sourceHandle: 'yes', label: 'yes', type: 'smoothstep' },
-  { id: 'e-urgent-draft', source: 'is-urgent', target: 'draft-reply', sourceHandle: 'no', label: 'no', type: 'smoothstep' },
-  { id: 'e-draft-approval', source: 'draft-reply', target: 'human-approval', type: 'smoothstep' },
-  { id: 'e-approval-send', source: 'human-approval', target: 'send-email', type: 'smoothstep' },
+  { id: 'e-webhook-classify', source: 'webhook', target: 'classify-ticket', ...workflowEdgeOptions },
+  { id: 'e-classify-urgent', source: 'classify-ticket', target: 'is-urgent', ...workflowEdgeOptions },
+  {
+    id: 'e-urgent-alert',
+    source: 'is-urgent',
+    target: 'alert',
+    sourceHandle: 'yes',
+    label: 'yes',
+    ...workflowEdgeOptions,
+  },
+  {
+    id: 'e-urgent-draft',
+    source: 'is-urgent',
+    target: 'draft-reply',
+    sourceHandle: 'no',
+    label: 'no',
+    ...workflowEdgeOptions,
+  },
+  { id: 'e-draft-approval', source: 'draft-reply', target: 'human-approval', ...workflowEdgeOptions },
+  { id: 'e-approval-send', source: 'human-approval', target: 'send-email', ...workflowEdgeOptions },
 ]
