@@ -1,14 +1,25 @@
 import type { Edge, Node } from '@xyflow/react'
 
-import { defaultLlmConfig } from './node-palette'
-import type { BuilderNodeData } from './types'
+import type { BuilderNodeData, LlmNodeConfig } from './types'
+
+const classifyConfig: LlmNodeConfig = {
+  credential_label: 'My OpenAI key (…)',
+  model: 'gpt-4o-mini',
+  prompt: 'Classify this ticket: {{ trigger.body.text }}',
+  structured_output: true,
+}
 
 export const supportTriageNodes: Node<BuilderNodeData>[] = [
   {
     id: 'webhook',
     type: 'workflow',
     position: { x: 280, y: 40 },
-    data: { label: 'Webhook', kind: 'trigger', config: {} },
+    data: {
+      label: 'Webhook',
+      type: 'trigger',
+      version: 1,
+      config: { trigger_type: 'webhook' },
+    },
   },
   {
     id: 'classify-ticket',
@@ -16,47 +27,73 @@ export const supportTriageNodes: Node<BuilderNodeData>[] = [
     position: { x: 240, y: 150 },
     data: {
       label: 'Classify ticket',
-      kind: 'llm',
-      config: { ...defaultLlmConfig },
+      type: 'llm',
+      version: 1,
+      config: classifyConfig,
     },
   },
   {
     id: 'is-urgent',
     type: 'workflow',
     position: { x: 248, y: 280 },
-    data: { label: 'Is urgent?', kind: 'condition', config: {} },
+    data: {
+      label: 'Is urgent?',
+      type: 'condition',
+      version: 1,
+      config: { expression: '' },
+    },
   },
   {
     id: 'alert',
     type: 'workflow',
     position: { x: 480, y: 280 },
-    data: { label: 'Alert', kind: 'notify', config: {} },
+    data: {
+      label: 'Alert',
+      type: 'notify',
+      version: 1,
+      config: { channel: 'slack', to: '#support', subject: '', body: '' },
+    },
   },
   {
     id: 'draft-reply',
     type: 'workflow',
     position: { x: 248, y: 400 },
-    data: { label: 'Draft reply', kind: 'llm', config: { ...defaultLlmConfig, prompt: 'Draft a reply for: {{ classify.output }}' } },
+    data: {
+      label: 'Draft reply',
+      type: 'llm',
+      version: 1,
+      config: { ...classifyConfig, prompt: 'Draft a reply for: {{ classify.output }}' },
+    },
   },
   {
     id: 'human-approval',
     type: 'workflow',
     position: { x: 232, y: 520 },
-    data: { label: 'Human approval', kind: 'approval', config: {} },
+    data: {
+      label: 'Human approval',
+      type: 'approval',
+      version: 1,
+      config: { message: 'Approval required to continue', assignee: null },
+    },
   },
   {
     id: 'send-email',
     type: 'workflow',
     position: { x: 248, y: 640 },
-    data: { label: 'Send email', kind: 'http', config: {} },
+    data: {
+      label: 'Send email',
+      type: 'http',
+      version: 1,
+      config: { url: '', method: 'POST', headers: {}, body: null },
+    },
   },
 ]
 
 export const supportTriageEdges: Edge[] = [
-  { id: 'e-webhook-classify', source: 'webhook', target: 'classify-ticket' },
-  { id: 'e-classify-urgent', source: 'classify-ticket', target: 'is-urgent' },
-  { id: 'e-urgent-alert', source: 'is-urgent', target: 'alert', sourceHandle: 'yes', label: 'yes' },
-  { id: 'e-urgent-draft', source: 'is-urgent', target: 'draft-reply', sourceHandle: 'no', label: 'no' },
-  { id: 'e-draft-approval', source: 'draft-reply', target: 'human-approval' },
-  { id: 'e-approval-send', source: 'human-approval', target: 'send-email' },
+  { id: 'e-webhook-classify', source: 'webhook', target: 'classify-ticket', type: 'smoothstep' },
+  { id: 'e-classify-urgent', source: 'classify-ticket', target: 'is-urgent', type: 'smoothstep' },
+  { id: 'e-urgent-alert', source: 'is-urgent', target: 'alert', sourceHandle: 'yes', label: 'yes', type: 'smoothstep' },
+  { id: 'e-urgent-draft', source: 'is-urgent', target: 'draft-reply', sourceHandle: 'no', label: 'no', type: 'smoothstep' },
+  { id: 'e-draft-approval', source: 'draft-reply', target: 'human-approval', type: 'smoothstep' },
+  { id: 'e-approval-send', source: 'human-approval', target: 'send-email', type: 'smoothstep' },
 ]

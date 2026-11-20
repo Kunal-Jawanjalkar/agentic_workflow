@@ -8,7 +8,7 @@ type NodeInspectorPanelProps = {
   onUpdateLlmConfig: (nodeId: string, patch: Partial<LlmNodeConfig>) => void
 }
 
-const kindLabels: Record<BuilderNodeData['kind'], string> = {
+const kindLabels: Record<BuilderNodeData['type'], string> = {
   trigger: 'Trigger node',
   llm: 'LLM node',
   agent: 'Agent node',
@@ -35,8 +35,8 @@ export function NodeInspectorPanel({ node, onUpdateLlmConfig }: NodeInspectorPan
   }
 
   const { data } = node
-  const isLlm = data.kind === 'llm'
-  const llmConfig = isLlm ? (data.config as LlmNodeConfig) : null
+  const isLlm = data.type === 'llm'
+  const llmConfig = isLlm ? data.config : null
 
   return (
     <aside
@@ -45,7 +45,7 @@ export function NodeInspectorPanel({ node, onUpdateLlmConfig }: NodeInspectorPan
     >
       <div className="border-b border-border/60 px-4 py-4">
         <h2 className="font-semibold">{data.label}</h2>
-        <p className="text-sm text-muted-foreground">{kindLabels[data.kind]}</p>
+        <p className="text-sm text-muted-foreground">{kindLabels[data.type]}</p>
       </div>
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
@@ -55,11 +55,12 @@ export function NodeInspectorPanel({ node, onUpdateLlmConfig }: NodeInspectorPan
               <FieldLabel>API key</FieldLabel>
               <select
                 className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm dark:bg-input/30"
-                value={llmConfig.credentialLabel}
+                value={llmConfig.credential_label}
                 onChange={(event) =>
-                  onUpdateLlmConfig(node.id, { credentialLabel: event.target.value })
+                  onUpdateLlmConfig(node.id, { credential_label: event.target.value })
                 }
               >
+                <option value="">Select a key</option>
                 <option value="My OpenAI key (…)">My OpenAI key (…)</option>
                 <option value="Team Anthropic key">Team Anthropic key</option>
               </select>
@@ -71,6 +72,7 @@ export function NodeInspectorPanel({ node, onUpdateLlmConfig }: NodeInspectorPan
                 value={llmConfig.model}
                 onChange={(event) => onUpdateLlmConfig(node.id, { model: event.target.value })}
               >
+                <option value="">Select a model</option>
                 <option value="gpt-4o-mini">gpt-4o-mini</option>
                 <option value="gpt-4o">gpt-4o</option>
                 <option value="claude-sonnet">claude-sonnet</option>
@@ -89,20 +91,20 @@ export function NodeInspectorPanel({ node, onUpdateLlmConfig }: NodeInspectorPan
               <Button
                 type="button"
                 size="sm"
-                variant={llmConfig.structuredOutput ? 'secondary' : 'outline'}
+                variant={llmConfig.structured_output ? 'secondary' : 'outline'}
                 onClick={() =>
                   onUpdateLlmConfig(node.id, {
-                    structuredOutput: !llmConfig.structuredOutput,
+                    structured_output: !llmConfig.structured_output,
                   })
                 }
               >
-                {llmConfig.structuredOutput ? 'On' : 'Off'}
+                {llmConfig.structured_output ? 'On' : 'Off'}
               </Button>
             </div>
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Configuration for {kindLabels[data.kind].toLowerCase()}s is coming soon.
+            Configuration for {kindLabels[data.type].toLowerCase()}s is coming soon.
           </p>
         )}
       </div>
