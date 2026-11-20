@@ -17,7 +17,9 @@ export function AddNodePanel({ hasTrigger, onAddNode }: AddNodePanelProps) {
       className="flex w-44 shrink-0 flex-col border-r border-border/60 bg-card/30"
       aria-label="Add node"
     >
-      <div className="border-b border-border/60 px-4 py-3 text-sm font-medium">Add node</div>
+      <div className="flex h-14 shrink-0 items-center border-b border-border/60 px-4 text-sm font-medium">
+        Add node
+      </div>
       {isPending ? (
         <p className="px-4 py-3 text-sm text-muted-foreground">Loading node types…</p>
       ) : null}

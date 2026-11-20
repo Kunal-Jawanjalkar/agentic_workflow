@@ -1,3 +1,4 @@
+import { appShellHeaderClassName } from '@/components/app/app-shell-layout'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -16,9 +17,13 @@ export function WorkflowBuilderHeader({
 }: WorkflowBuilderHeaderProps) {
   return (
     <header
-      className="flex shrink-0 flex-col gap-3 border-b border-border/60 bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+      className={cn(
+        appShellHeaderClassName,
+        'justify-between gap-3 bg-background px-4',
+        'max-sm:h-auto max-sm:min-h-14 max-sm:flex-col max-sm:items-stretch max-sm:py-3',
+      )}
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-3 max-sm:w-full">
         <h1 className="truncate text-lg font-semibold tracking-tight">{title}</h1>
         <span
           className={cn(

@@ -32,4 +32,19 @@ describe('ThemeToggle', () => {
     await user.click(screen.getByRole('option', { name: 'Default' }))
     expect(screen.getByRole('button', { name: 'Theme: Default' })).toBeInTheDocument()
   })
+
+  it('portals the menu beside the icon trigger when expand is set', async () => {
+    const user = userEvent.setup()
+    render(
+      <ThemeProvider>
+        <ThemeToggle iconOnly menuAlign="expand" />
+      </ThemeProvider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: /^Theme:/ }))
+
+    const listbox = screen.getByRole('listbox', { name: 'Theme options' })
+    expect(listbox.parentElement).toBe(document.body)
+    expect(screen.getByRole('option', { name: 'Dark' })).toBeInTheDocument()
+  })
 })

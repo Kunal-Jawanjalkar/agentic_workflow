@@ -9,7 +9,9 @@ import {
 } from 'lucide-react'
 import { NavLink, useMatch } from 'react-router-dom'
 
+import { appShellHeaderClassName } from '@/components/app/app-shell-layout'
 import { AppBrand } from '@/components/app/AppBrand'
+import { cn } from '@/lib/utils'
 import { SidebarCollapseToggle } from '@/components/app/SidebarCollapseToggle'
 import { ThemeToggle } from '@/components/app/ThemeToggle'
 import {
@@ -84,12 +86,15 @@ export function AppNavSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader
-        className="flex flex-row items-center gap-2 border-b border-sidebar-border px-2 py-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2 group-data-[collapsible=icon]:py-3"
+        className={cn(
+          appShellHeaderClassName,
+          'flex-row gap-2 px-2 py-0',
+        )}
       >
-        <div className="flex min-w-0 flex-1 items-center px-1 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:px-0">
+        <div className="flex min-w-0 flex-1 items-center px-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <AppBrand />
         </div>
-        <SidebarCollapseToggle className="shrink-0 group-data-[collapsible=icon]:size-8" />
+        <SidebarCollapseToggle className="shrink-0 group-data-[collapsible=icon]:hidden" />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -102,12 +107,12 @@ export function AppNavSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border gap-2 p-2">
+      <SidebarFooter className="gap-2 overflow-visible border-t border-border/60 p-2">
         <div className="px-1 group-data-[collapsible=icon]:hidden">
           <ThemeToggle className="w-full" menuPlacement="top" />
         </div>
-        <div className="hidden justify-center px-1 group-data-[collapsible=icon]:flex">
-          <ThemeToggle iconOnly menuPlacement="top" />
+        <div className="hidden w-full justify-center group-data-[collapsible=icon]:flex">
+          <ThemeToggle iconOnly menuPlacement="top" menuAlign="expand" />
         </div>
         <SidebarMenu>
           <SettingsNavItem />
