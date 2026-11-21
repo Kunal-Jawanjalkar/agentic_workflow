@@ -20,6 +20,7 @@ from backend.app import app
 from backend.core.config import get_settings
 from backend.db.session import get_db
 from backend.models.user import User
+from backend.models.workflows import Trigger, Workflow, WorkflowVersion
 
 
 @pytest.fixture(autouse=True)
@@ -36,7 +37,8 @@ def engine():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    User.__table__.create(eng, checkfirst=True)
+    for table in (User.__table__, Workflow.__table__, WorkflowVersion.__table__, Trigger.__table__):
+        table.create(eng, checkfirst=True)
     return eng
 
 
@@ -61,6 +63,22 @@ def client(db_session: Session) -> Generator[TestClient]:
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def auth_client(client, register_payload):
+    client.post("/api/v1/auth/register", json=register_payload)
+    from backend.core.cookies import ACCESS_TOKEN_COOKIE_NAME
+
+    login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": register_payload["email"],
+            "password": register_payload["password"],
+        },
+    )
+    client.cookies.set(ACCESS_TOKEN_COOKIE_NAME, login.cookies[ACCESS_TOKEN_COOKIE_NAME])
+    return client
 
 
 @pytest.fixture

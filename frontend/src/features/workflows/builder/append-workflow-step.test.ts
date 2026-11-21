@@ -181,6 +181,80 @@ describe('appendWorkflowStep', () => {
     ).toBe(false)
   })
 
+  it('assigns the first branch output when appending from a condition without a selection', () => {
+    const condition = appendWorkflowStep([], [], {
+      id: 'condition-1',
+      nodeType: conditionSchema,
+    })
+
+    const graph = appendWorkflowStep(condition.nodes, condition.edges, {
+      id: 'notify-yes',
+      nodeType: notifySchema,
+      selectedNodeId: null,
+    })
+
+    expect(graph.edges[0]).toMatchObject({
+      source: 'condition-1',
+      target: 'notify-yes',
+      sourceHandle: 'yes',
+      label: 'yes',
+    })
+    expect(graph.nodes[1]?.position).toEqual({ x: 280 + 240, y: 48 })
+  })
+
+  it('uses the no output when a legacy condition edge had no source handle', () => {
+    const notifyNode = {
+      id: 'notify-yes',
+      type: 'workflow' as const,
+      position: { x: 280, y: 176 },
+      data: {
+        label: 'Notify',
+        type: 'notify' as const,
+        version: 1,
+        config: { channel: 'email', to: '', subject: '', body: '' },
+      },
+    }
+    const nodes = [
+      {
+        id: 'condition-1',
+        type: 'workflow' as const,
+        position: { x: 280, y: 48 },
+        data: {
+          label: 'Condition',
+          type: 'condition' as const,
+          version: 1,
+          config: { expression: '' },
+        },
+      },
+      notifyNode,
+    ]
+    const edges = [
+      {
+        id: 'condition-1-notify-yes',
+        source: 'condition-1',
+        target: 'notify-yes',
+        type: 'smoothstep' as const,
+      },
+    ]
+
+    const graph = appendWorkflowStep(nodes, edges, {
+      id: 'http-no',
+      nodeType: { ...notifySchema, type: 'http', label: 'HTTP' },
+      selectedNodeId: 'condition-1',
+    })
+
+    expect(graph.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: 'condition-1',
+          target: 'http-no',
+          sourceHandle: 'no',
+          label: 'no',
+        }),
+      ]),
+    )
+  })
+
   it('attaches the next two nodes to the condition yes and no outputs', () => {
     const condition = appendWorkflowStep([], [], {
       id: 'condition-1',
@@ -194,35 +268,53 @@ describe('appendWorkflowStep', () => {
     const graph = appendWorkflowStep(yesBranch.nodes, yesBranch.edges, {
       id: 'http-no',
       nodeType: { ...notifySchema, type: 'http', label: 'HTTP' },
-      selectedNodeId: 'notify-yes',
+      selectedNodeId: 'condition-1',
     })
 
     expect(graph.edges).toEqual([
-      {
+      expect.objectContaining({
         id: 'condition-1-notify-yes',
         source: 'condition-1',
         target: 'notify-yes',
         sourceHandle: 'yes',
         label: 'yes',
-        type: 'smoothstep',
-        pathOptions: { borderRadius: 16 },
-        style: { strokeWidth: 2 },
-        markerEnd: { type: 'arrowclosed', width: 16, height: 16 },
-      },
-      {
+      }),
+      expect.objectContaining({
         id: 'condition-1-http-no',
         source: 'condition-1',
         target: 'http-no',
         sourceHandle: 'no',
         label: 'no',
-        type: 'smoothstep',
-        pathOptions: { borderRadius: 16 },
-        style: { strokeWidth: 2 },
-        markerEnd: { type: 'arrowclosed', width: 16, height: 16 },
-      },
+      }),
     ])
     expect(graph.nodes[1]?.position).toEqual({ x: 280 + 240, y: 48 })
     expect(graph.nodes[2]?.position).toEqual({ x: 280, y: 48 + 128 })
+  })
+
+  it('extends the yes branch when the yes child is still a sink', () => {
+    const condition = appendWorkflowStep([], [], {
+      id: 'condition-1',
+      nodeType: conditionSchema,
+    })
+    const yesBranch = appendWorkflowStep(condition.nodes, condition.edges, {
+      id: 'notify-yes',
+      nodeType: notifySchema,
+      selectedNodeId: 'condition-1',
+    })
+    const graph = appendWorkflowStep(yesBranch.nodes, yesBranch.edges, {
+      id: 'llm-1',
+      nodeType: llmSchema,
+      selectedNodeId: 'notify-yes',
+    })
+
+    expect(graph.edges).toHaveLength(2)
+    expect(graph.edges[1]).toMatchObject({
+      source: 'notify-yes',
+      target: 'llm-1',
+    })
+    expect(graph.edges.some((edge) => edge.source === 'condition-1' && edge.sourceHandle === 'no')).toBe(
+      false,
+    )
   })
 
   it('chains a later node from the selected branch once both outputs are used', () => {
@@ -238,7 +330,7 @@ describe('appendWorkflowStep', () => {
     const both = appendWorkflowStep(yesBranch.nodes, yesBranch.edges, {
       id: 'http-no',
       nodeType: notifySchema,
-      selectedNodeId: 'notify-yes',
+      selectedNodeId: 'condition-1',
     })
     const graph = appendWorkflowStep(both.nodes, both.edges, {
       id: 'llm-1',
@@ -292,7 +384,7 @@ describe('appendWorkflowStep', () => {
     const both = appendWorkflowStep(yesBranch.nodes, yesBranch.edges, {
       id: 'http-no',
       nodeType: { ...notifySchema, type: 'http', label: 'HTTP' },
-      selectedNodeId: 'notify-yes',
+      selectedNodeId: 'condition-1',
     })
 
     expect(appendTailNode(both.nodes, both.edges)?.id).toBe('http-no')

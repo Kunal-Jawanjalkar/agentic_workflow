@@ -24,11 +24,43 @@ type WorkflowStep = {
   selectedNodeId?: string | null
 }
 
+function usedConditionOutputs(edges: Edge[], conditionId: string): Set<ConditionOutput> {
+  const used = new Set<ConditionOutput>()
+  const outgoing = edges.filter((edge) => edge.source === conditionId)
+
+  for (const edge of outgoing) {
+    if (edge.sourceHandle === 'yes' || edge.sourceHandle === 'no') {
+      used.add(edge.sourceHandle)
+    }
+  }
+
+  for (const edge of outgoing) {
+    if (edge.sourceHandle !== 'yes' && edge.sourceHandle !== 'no') {
+      if (!used.has('yes')) {
+        used.add('yes')
+      } else if (!used.has('no')) {
+        used.add('no')
+      }
+    }
+  }
+
+  return used
+}
+
 function nextConditionOutput(edges: Edge[], conditionId: string): ConditionOutput | null {
-  const used = new Set(
-    edges.filter((edge) => edge.source === conditionId).map((edge) => edge.sourceHandle),
-  )
+  const used = usedConditionOutputs(edges, conditionId)
   return conditionOutputs.find((output) => !used.has(output)) ?? null
+}
+
+function conditionEdgeFields(sourceHandle: ConditionOutput) {
+  return {
+    sourceHandle,
+    label: sourceHandle,
+    labelStyle: { fill: 'var(--foreground)', fontSize: 11, fontWeight: 600 },
+    labelBgStyle: { fill: 'var(--card)', fillOpacity: 0.95 },
+    labelBgPadding: [4, 6] as [number, number],
+    labelBgBorderRadius: 4,
+  }
 }
 
 function branchParent(
@@ -50,6 +82,9 @@ function branchParent(
   const incoming = edges.find((edge) => edge.target === node.id)
   const parent = incoming ? nodes.find((item) => item.id === incoming.source) : undefined
   if (!parent || parent.data.type !== 'condition') {
+    return null
+  }
+  if (!hasOutgoingEdge(edges, node.id)) {
     return null
   }
   const sourceHandle = nextConditionOutput(edges, parent.id)
@@ -164,6 +199,14 @@ export function appendWorkflowStep(
     sourceHandle = undefined
   }
 
+  if (parent?.data.type === 'condition') {
+    const resolved = sourceHandle ?? nextConditionOutput(edges, parent.id)
+    if (!resolved) {
+      return { nodes, edges }
+    }
+    sourceHandle = resolved
+  }
+
   const existingOutgoing =
     parent != null ? outgoingFromHandle(edges, parent.id, sourceHandle) : undefined
   const existingChild =
@@ -200,7 +243,7 @@ export function appendWorkflowStep(
     source: parent.id,
     target: node.id,
     ...workflowEdgeOptions,
-    ...(sourceHandle ? { sourceHandle, label: sourceHandle } : {}),
+    ...(sourceHandle ? conditionEdgeFields(sourceHandle) : {}),
   }
 
   if (existingOutgoing != null && existingChild != null) {

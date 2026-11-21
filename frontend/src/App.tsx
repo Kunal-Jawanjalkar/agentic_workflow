@@ -24,7 +24,6 @@ function App() {
         >
           <Route index element={<HomePage />} />
           <Route path="workflows" element={<WorkflowsPage />} />
-          <Route path="workflows/new" element={<WorkflowEditorPage />} />
           <Route path="workflows/:workflowId" element={<WorkflowEditorPage />} />
           <Route path="runs" element={<PlaceholderPage title="Runs" />} />
           <Route path="approvals" element={<PlaceholderPage title="Approvals" />} />

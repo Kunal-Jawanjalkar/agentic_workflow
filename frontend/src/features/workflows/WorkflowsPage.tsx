@@ -5,9 +5,10 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { filterWorkflows } from '@/features/workflows/filter-workflows'
+import { useWorkflowList } from '@/features/workflows/hooks'
+import { mapWorkflowSummaryToListItem } from '@/features/workflows/workflow-list'
 import {
   workflowFilters,
-  workflows,
   type WorkflowFilter,
   type WorkflowListItem,
   type WorkflowStatusKind,
@@ -34,10 +35,16 @@ function TriggerCell({ trigger }: { trigger: WorkflowListItem['trigger'] }) {
 export function WorkflowsPage() {
   const [query, setQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<WorkflowFilter>('all')
+  const { data: workflowSummaries, isPending, isError } = useWorkflowList()
+
+  const workflowItems = useMemo(
+    () => workflowSummaries?.map(mapWorkflowSummaryToListItem) ?? [],
+    [workflowSummaries],
+  )
 
   const visibleWorkflows = useMemo(
-    () => filterWorkflows(workflows, query, activeFilter),
-    [query, activeFilter],
+    () => filterWorkflows(workflowItems, query, activeFilter),
+    [workflowItems, query, activeFilter],
   )
 
   return (
@@ -105,13 +112,33 @@ export function WorkflowsPage() {
             </tr>
           </thead>
           <tbody>
-            {visibleWorkflows.length === 0 ? (
+            {isPending ? (
               <tr>
                 <td
                   colSpan={7}
                   className="px-5 py-10 text-center text-muted-foreground"
                 >
-                  No workflows match your search.
+                  Loading workflows…
+                </td>
+              </tr>
+            ) : isError ? (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-5 py-10 text-center text-destructive"
+                >
+                  Could not load workflows.
+                </td>
+              </tr>
+            ) : visibleWorkflows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-5 py-10 text-center text-muted-foreground"
+                >
+                  {workflowItems.length === 0
+                    ? 'No workflows yet. Create one to get started.'
+                    : 'No workflows match your search.'}
                 </td>
               </tr>
             ) : (
