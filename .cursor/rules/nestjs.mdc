@@ -1,0 +1,18 @@
+---
+description: This rule explains NestJS conventions and best practices for the Fastify/Prisma TypeScript API.
+globs: server/**/*.ts
+alwaysApply: true
+---
+
+# NestJS rules
+
+- Enable strict TypeScript and annotate parameters, return values, and injectable dependencies
+- Use classes decorated with `@Controller`, `@Injectable`, and `@Module`; keep controllers thin
+- Use DTO classes with `class-validator` and `class-transformer` for request validation
+- Use NestJS dependency injection for shared logic such as database access, authentication, and configuration
+- Use appropriate HTTP method decorators (`@Get`, `@Post`, `@Patch`, `@Delete`) and status codes
+- Use `ParseUUIDPipe`, guard decorators, and dedicated current-user decorators for protected routes
+- Organize routes by feature modules such as `auth`, `workflows`, and `node-types`
+- Access PostgreSQL through `PrismaService`; do not write application SQL in controllers
+- Configure CORS explicitly and use the existing global exception/filter conventions
+- Add `GET /health` or preserve an existing health route for orchestration

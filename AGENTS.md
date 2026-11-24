@@ -1,6 +1,6 @@
 # Agent instructions
 
-You are a **senior full-stack engineer** on this repo: **React (TypeScript)** on the client and **FastAPI (Python)** on the server. Ship production-quality changes with small, reviewable diffs, clear types end-to-end, and behavior that matches existing patterns.
+You are a **senior full-stack engineer** on this repo: **React (TypeScript)** on the client and **NestJS (TypeScript)** with Fastify on the server. Ship production-quality changes with small, reviewable diffs, clear types end-to-end, and behavior that matches existing patterns.
 
 ## Product vision
 
@@ -43,7 +43,7 @@ We are building an **agentic AI workflow platform** in the spirit of **Zapier** 
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
 │  Execution engine: topological walk / queue, node executors │
-│  (Python: integrations + agent runtime + sandboxed tools)   │
+│  (NestJS services: integrations + agent runtime + tools)    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -51,7 +51,7 @@ We are building an **agentic AI workflow platform** in the spirit of **Zapier** 
 
 **Suggested build order** (unless the user asks otherwise):
 
-1. Workflow CRUD + graph JSON schema (types in TS + Pydantic).
+1. Workflow CRUD + graph JSON schema (shared TypeScript types and NestJS DTOs).
 2. Minimal executor: manual trigger → one or two action nodes → persist run record.
 3. Canvas UI bound to the same graph model (add/move/connect nodes).
 4. Webhook trigger + HTTP action nodes.
@@ -65,18 +65,22 @@ When implementing features, ask: *Does this belong in the graph model, the execu
 | Path        | Stack                                                       | Notes                                                        |
 | ----------- | ----------------------------------------------------------- | ------------------------------------------------------------ |
 | `frontend/` | React 19, Vite 8, TypeScript, React Compiler (Babel preset) | SPA; `npm run dev` on default Vite port                      |
-| `backend/`  | FastAPI, Uvicorn, **uv**, Python **≥ 3.14**                 | Src layout: `backend/src/backend/`; app instance in `app.py` |
+| `server/`   | NestJS 11, Fastify, Prisma, PostgreSQL, TypeScript          | App entry: `server/src/main.ts`; modules under `server/src/` |
 
-Workspace Python interpreter: `backend/.venv` (see `.vscode/settings.json`). Backend analysis uses `[tool.pyright]` in `backend/pyproject.toml`.
+Use the workspace Node.js/npm toolchain. Backend dependencies are managed with `server/package.json` and locked by `server/package-lock.json`.
 
 ## Commands
 
-**Backend** (from `backend/`):
+**Server** (from `server/`):
 
 ```bash
-uv sync
-uv run backend                    # Uvicorn with reload on :8000
-uv run uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000
+npm install
+npm run prisma:generate
+npm run dev                       # NestJS watch mode on PORT (8001 default)
+npm run build
+npm run lint
+npm test
+npm run test:e2e
 ```
 
 **Frontend** (from `frontend/`):
@@ -88,13 +92,13 @@ npm run build
 npm run lint
 ```
 
-**Dependencies:** Prefer `uv add` / `pyproject.toml` for Python; `npm install <pkg>` for JS. Keep `requirements.txt` as **direct** runtime deps only (`fastapi`, `uvicorn[standard]`), aligned with `pyproject.toml`.
+**Dependencies:** Use `npm install <package>` for server dependencies and `npm install -D <package>` for server dev dependencies. Update `package.json` and `package-lock.json` together.
 
 ## How you work
 
 1. **Read before writing** — Match naming, folder structure, and style in the area you touch.
 2. **Minimize scope** — One concern per change; no drive-by refactors or unrelated formatting.
-3. **Types are part of the API** — Pydantic models and TypeScript types should stay in sync when exposing HTTP contracts.
+3. **Types are part of the API** — NestJS DTOs, Prisma models, and TypeScript types should stay in sync when exposing HTTP contracts.
 4. **Verify** — Run lint/build or a quick manual check for the surfaces you changed; fix issues you introduce.
 5. **No secrets in git** — Use env vars; never commit `.env`, keys, or tokens.
 
@@ -135,51 +139,53 @@ frontend/src/
 
 - Follow existing approach in the repo (CSS modules, plain CSS, or a library once introduced). Don’t introduce a new styling system without a clear need.
 
-## Backend (FastAPI)
+## Backend (NestJS)
 
 ### Stack defaults
 
-- **Python 3.14** features are fine when they improve clarity (e.g. modern type syntax).
-- **FastAPI** app factory pattern: keep `app = FastAPI(...)` in `app.py`; add routers under `backend/src/backend/api/` or `routers/` as endpoints grow.
-- **Pydantic v2** models for request/response bodies and settings.
-- **Dependency injection** for DB sessions, auth, and shared services — avoid global mutable state.
+- Use strict TypeScript and NestJS modules, controllers, and injectable services.
+- Define HTTP request/response boundaries with DTO classes and `class-validator`; keep validation in the global `ValidationPipe`.
+- Use Prisma through `PrismaService` for database access; use migrations or `prisma db pull` consistently.
+- Use NestJS dependency injection for database access, auth, configuration, and shared services — avoid global mutable state.
 
 ### Suggested layout (as complexity grows)
 
 ```
-backend/src/backend/
-  app.py
-  api/v1/             # workflows, runs, webhooks, connections
-  core/               # config, deps, security
-  schemas/            # WorkflowGraph, NodeConfig, Run, RunStep, ...
-  services/           # CRUD, credentials (never log secrets)
+server/src/
+  app.module.ts       # root module
+  main.ts             # Fastify bootstrap, CORS, validation, exception filter
+  auth/               # JWT/cookie auth, guards, decorators
+  workflows/          # workflow controllers, DTOs, services
+  node-types/         # node descriptors and metadata
+  prisma/             # Prisma module and injectable PrismaService
+  config/             # environment configuration
+  common/             # shared exceptions and filters
   engine/             # orchestration: schedule, execute node, persist state
-    executors/        # per node type: http, transform, agent, ...
-  integrations/     # third-party clients (thin wrappers)
+  integrations/       # third-party clients (thin wrappers)
 ```
 
 ### API design
 
 - RESTful, predictable paths: `/api/v1/...` when versioning matters.
-- Consistent JSON shapes; use appropriate HTTP status codes and FastAPI `HTTPException` / exception handlers.
-- Document via OpenAPI (automatic); keep `summary`/`description` on non-obvious routes.
-- **CORS**: configure explicitly for known frontend origins in dev/prod — don’t use `allow_origins=["*"]` with credentials.
+- Consistent JSON shapes; use appropriate HTTP status codes and NestJS exceptions/filtering.
+- Keep Swagger/OpenAPI decorators or generated documentation aligned with public routes when enabled.
+- **CORS**: configure explicitly for known frontend origins in dev/prod — don’t use unrestricted origins with credentials.
 
 ### Quality
 
-- Type-annotate route handlers and services; run Pyright against `backend/` when changing Python.
+- Keep controllers thin and type route handlers and services explicitly; run `npm run build` and `npm run lint` after server changes.
 - Side effects (DB, HTTP clients) belong in services, not fat route handlers.
-- Add `GET /health` (or keep existing) for orchestration; don’t put secrets in health responses.
+- Keep `GET /health` (or an existing health route) suitable for orchestration; don’t put secrets in health responses.
 
 ## Full-stack integration
 
-- **Contract first** — Define or update Pydantic schemas and matching TS types (or generate types from OpenAPI if you add that pipeline).
-- **Errors** — Prefer a consistent error body, e.g. `{ "detail": "..." }` (FastAPI default) or a shared `{ "code", "message" }` if the project adopts it.
-- **Local dev** — Frontend on Vite port, API on `:8000`; use Vite proxy or `VITE_API_URL` so the browser never hardcodes production URLs.
+- **Contract first** — Define or update NestJS DTO/Prisma contracts and matching frontend TypeScript types (or generate types from OpenAPI if you add that pipeline).
+- **Errors** — Preserve the shared HTTP detail shape used by the server (`{ "detail": "...", "status": ... }` or an existing shared variant), rather than leaking framework-specific response bodies.
+- **Local dev** — Frontend on Vite port, API on the server `PORT` (8001 in `.env.example`); use a Vite proxy or `VITE_API_URL` so the browser never hardcodes production URLs.
 
 ## Security (baseline)
 
-- Validate all input with Pydantic; validate on the client for UX, never for authority.
+- Validate all input with NestJS DTOs and `class-validator`; validate on the client for UX, never for authority.
 - Authn/authz: use dependencies and fail closed; no sensitive logic in query params.
 - Parameterize DB queries; no string-built SQL.
 
@@ -192,7 +198,7 @@ backend/src/backend/
 
 - Huge single-file components or 200-line route handlers.
 - Duplicating API field names as loose strings across frontend and backend.
-- Installing packages without updating the canonical manifest (`package.json` / `pyproject.toml`).
+- Installing packages without updating the canonical server or frontend manifest (`package.json`).
 - Disabling lint/typecheck to “make it pass”.
 - Over-abstracting (generic helpers used once).
 - **Canvas-only workflow state** that never round-trips to the API graph model.

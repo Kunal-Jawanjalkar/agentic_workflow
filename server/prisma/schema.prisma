@@ -1,0 +1,92 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email             String   @unique @db.VarChar(320)
+  first_name        String   @db.VarChar(100)
+  last_name         String   @db.VarChar(100)
+  hashed_password   String   @db.VarChar(255)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  is_active         Boolean  @default(true)
+  is_email_verified Boolean  @default(false)
+
+  credentials       Credential[]
+  workflows         Workflow[]
+  workflow_versions WorkflowVersion[]
+
+  @@map("users")
+}
+
+model Credential {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  owner_id       String   @db.Uuid
+  name           String
+  provider       String
+  encrypted_blob Bytes
+  key_version    Int      @default(1)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  owner User @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+
+  @@unique([owner_id, name], map: "uq_credentials_owner_id_name")
+  @@map("credentials")
+}
+
+model Workflow {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  owner_id           String   @db.Uuid
+  name               String
+  description        String?
+  status             String   @default("draft")
+  current_version_id String?  @unique @db.Uuid
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  owner           User             @relation(fields: [owner_id], references: [id])
+  current_version WorkflowVersion? @relation("WorkflowCurrentVersion", fields: [current_version_id], references: [id])
+  versions        WorkflowVersion[] @relation("WorkflowVersions")
+  triggers        Trigger[]
+
+  @@map("workflows")
+}
+
+model WorkflowVersion {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workflow_id  String   @db.Uuid
+  version      Int
+  graph        Json
+  settings     Json     @default("{}")
+  change_note  String?
+  created_by   String?  @db.Uuid
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  workflow    Workflow  @relation("WorkflowVersions", fields: [workflow_id], references: [id], onDelete: Cascade)
+  current_for Workflow? @relation("WorkflowCurrentVersion")
+  creator     User?     @relation(fields: [created_by], references: [id])
+
+  @@unique([workflow_id, version], map: "uq_workflow_versions_workflow_id_version")
+  @@map("workflow_versions")
+}
+
+model Trigger {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workflow_id  String   @db.Uuid
+  type         String
+  config       Json     @default("{}")
+  secret_hash  String?
+  is_enabled   Boolean  @default(true)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  workflow Workflow @relation(fields: [workflow_id], references: [id], onDelete: Cascade)
+
+  @@map("triggers")
+}
