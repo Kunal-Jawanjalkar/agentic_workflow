@@ -109,7 +109,7 @@ npm run lint
 - **Functional components** only; use hooks for state and effects.
 - **TypeScript strict** — Explicit props/types; avoid `any` unless justified in a comment.
 - **React 19** + **React Compiler** — Rely on the compiler for memoization where appropriate; still write clear data flow (don’t fight the compiler with unstable inline objects in hot paths without reason).
-- **Vite** — ESM, `import` for assets; configure API proxy in `vite.config.ts` when calling the backend in dev (e.g. `/api` → `http://localhost:8000`).
+- **Vite** — ESM, `import` for assets; configure API proxy in `vite.config.ts` when calling the server in dev (e.g. `/api` → `http://localhost:8001`).
 
 ### Structure (grow into this as the app grows)
 

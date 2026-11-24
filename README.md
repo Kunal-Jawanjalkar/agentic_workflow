@@ -2,24 +2,21 @@
 
 ## Prerequisites
 
-- Python ≥ 3.14 and [uv](https://docs.astral.sh/uv/)
-- Node.js and npm
+- Node.js 24 and npm
 - Docker (for PostgreSQL)
 
 ## Setup
 
-### Backend
+### Server
 
 ```bash
-cd backend
+cd server
 cp .env.example .env
 # Set SECRET_KEY in .env
 docker compose up -d db
-uv sync
-uv run alembic upgrade head
+npm install
+npm run prisma:generate
 ```
-
-If `upgrade head` fails because `users` already exists from an older dev setup, run the command again after pulling the latest migration (it upgrades legacy tables in place). For a clean slate: `docker compose down -v`, then start Postgres and run migrations again.
 
 ### Frontend
 
@@ -30,13 +27,13 @@ npm install
 
 ## Start
 
-**Backend** (from `backend/`):
+**Server** (from `server/`):
 
 ```bash
-uv run backend
+npm run dev
 ```
 
-API: http://localhost:8000
+API: http://localhost:8001
 
 **Frontend** (from `frontend/`):
 
@@ -46,11 +43,11 @@ npm run dev
 
 App: http://localhost:5173
 
-The frontend dev server proxies `/api` to the backend on port 8000.
+The frontend dev server proxies `/api` to the NestJS server on port 8001.
 
 ## Docker (optional)
 
-Run API and database together from `backend/` (set `DATABASE_URL` to use host `db`, e.g. `postgresql://app:app@db:5432/agentic_workflow`):
+Run the API and database together from `server/`:
 
 ```bash
 docker compose up --build

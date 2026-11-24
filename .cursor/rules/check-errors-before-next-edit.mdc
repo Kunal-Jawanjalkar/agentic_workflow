@@ -10,8 +10,8 @@ After you write or change a file, check that file for errors and fix them before
 ## What to check
 
 - IDE diagnostics on the file you just changed (linter and type errors).
-- Frontend (`frontend/`): `npx eslint` on the changed files. Run `npx tsc -b --pretty false` when the change can affect types.
-- Backend (`backend/`): Pyright diagnostics on the changed files.
+- Frontend (`frontend/`): `npm run lint` or `npx eslint` on the changed files. Run `npm run build` or `npx tsc -b --pretty false` when the change can affect types.
+- Server (`server/`): `npm run lint` and `npm run build`; check IDE TypeScript diagnostics on changed files.
 
 ## Order
 
