@@ -6,7 +6,7 @@ export type WorkflowStatusKind =
   | 'last_run_failed'
   | 'draft'
 
-export type WorkflowTriggerType = 'webhook' | 'manual'
+export type WorkflowTriggerType = 'webhook' | 'manual' | 'scheduler'
 
 export type WorkflowListItem = {
   id: string

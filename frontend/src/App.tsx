@@ -8,6 +8,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
 import { RegisterPage } from '@/features/auth/RegisterPage'
 import { HomePage } from '@/features/home/HomePage'
+import { RunsPage } from '@/features/runs/RunsPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 
 function App() {
@@ -25,7 +26,7 @@ function App() {
           <Route index element={<HomePage />} />
           <Route path="workflows" element={<WorkflowsPage />} />
           <Route path="workflows/:workflowId" element={<WorkflowEditorPage />} />
-          <Route path="runs" element={<PlaceholderPage title="Runs" />} />
+          <Route path="runs" element={<RunsPage />} />
           <Route path="approvals" element={<PlaceholderPage title="Approvals" />} />
           <Route path="evals" element={<PlaceholderPage title="Evals" />} />
           <Route path="credentials" element={<PlaceholderPage title="Credentials" />} />

@@ -15,6 +15,10 @@ type WorkflowBuilderHeaderProps = {
   savedLabel: string
   titleEditable?: boolean
   onTitleChange?: (name: string) => void | Promise<void>
+  onRunTest?: () => void
+  isRunningTest?: boolean
+  runTestDisabled?: boolean
+  runStatusMessage?: string | null
 }
 
 function EditableWorkflowTitle({
@@ -140,6 +144,10 @@ export function WorkflowBuilderHeader({
   savedLabel,
   titleEditable = false,
   onTitleChange,
+  onRunTest,
+  isRunningTest = false,
+  runTestDisabled = false,
+  runStatusMessage,
 }: WorkflowBuilderHeaderProps) {
   return (
     <header
@@ -165,10 +173,19 @@ export function WorkflowBuilderHeader({
           {statusLabel}
         </span>
         <span className="text-xs text-muted-foreground">{savedLabel}</span>
+        {runStatusMessage ? (
+          <span className="text-xs text-muted-foreground">{runStatusMessage}</span>
+        ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" size="sm">
-          Run test
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={runTestDisabled || isRunningTest || !onRunTest}
+          onClick={onRunTest}
+        >
+          {isRunningTest ? 'Running…' : 'Run test'}
         </Button>
         <Button type="button" variant="outline" size="sm">
           Run evals

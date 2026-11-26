@@ -54,4 +54,21 @@ describe('config-schema-fields', () => {
     expect(parseConfigValue(tools, 'search, http')).toEqual(['search', 'http'])
     expect(readConfigValue({ tools: ['a', 'b'] }, tools)).toBe('a, b')
   })
+
+  it('parses simplified nullable string fields', () => {
+    const body = describeConfigField('body', {
+      type: 'string',
+      nullable: true,
+      default: null,
+    })
+
+    expect(body).toMatchObject({
+      key: 'body',
+      label: 'Body',
+      kind: 'textarea',
+      nullable: true,
+    })
+    expect(parseConfigValue(body, '')).toBeNull()
+    expect(parseConfigValue(body, '{"ok":true}')).toBe('{"ok":true}')
+  })
 })

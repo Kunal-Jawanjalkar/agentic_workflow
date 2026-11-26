@@ -22,6 +22,7 @@ model User {
   credentials       Credential[]
   workflows         Workflow[]
   workflow_versions WorkflowVersion[]
+  workflow_runs     WorkflowRun[]
 
   @@map("users")
 }
@@ -55,6 +56,7 @@ model Workflow {
   current_version WorkflowVersion? @relation("WorkflowCurrentVersion", fields: [current_version_id], references: [id])
   versions        WorkflowVersion[] @relation("WorkflowVersions")
   triggers        Trigger[]
+  runs            WorkflowRun[]
 
   @@map("workflows")
 }
@@ -69,9 +71,10 @@ model WorkflowVersion {
   created_by   String?  @db.Uuid
   created_at   DateTime @default(now()) @db.Timestamptz(6)
 
-  workflow    Workflow  @relation("WorkflowVersions", fields: [workflow_id], references: [id], onDelete: Cascade)
-  current_for Workflow? @relation("WorkflowCurrentVersion")
-  creator     User?     @relation(fields: [created_by], references: [id])
+  workflow    Workflow      @relation("WorkflowVersions", fields: [workflow_id], references: [id], onDelete: Cascade)
+  current_for Workflow?     @relation("WorkflowCurrentVersion")
+  creator     User?         @relation(fields: [created_by], references: [id])
+  runs        WorkflowRun[]
 
   @@unique([workflow_id, version], map: "uq_workflow_versions_workflow_id_version")
   @@map("workflow_versions")
@@ -89,4 +92,50 @@ model Trigger {
   workflow Workflow @relation(fields: [workflow_id], references: [id], onDelete: Cascade)
 
   @@map("triggers")
+}
+
+model WorkflowRun {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workflow_id          String    @db.Uuid
+  workflow_version_id  String    @db.Uuid
+  owner_id             String    @db.Uuid
+  status               String    @default("pending")
+  trigger_type         String
+  trigger_input        Json      @default("{}")
+  output               Json?
+  error                String?
+  temporal_workflow_id String?
+  temporal_run_id      String?
+  started_at           DateTime? @db.Timestamptz(6)
+  finished_at          DateTime? @db.Timestamptz(6)
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+
+  workflow         Workflow        @relation(fields: [workflow_id], references: [id], onDelete: Cascade)
+  workflow_version WorkflowVersion @relation(fields: [workflow_version_id], references: [id], onDelete: Cascade)
+  owner            User            @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  node_runs        NodeRun[]
+
+  @@index([workflow_id, created_at(sort: Desc)], map: "idx_workflow_runs_workflow_id_created_at")
+  @@index([owner_id, created_at(sort: Desc)], map: "idx_workflow_runs_owner_id_created_at")
+  @@map("workflow_runs")
+}
+
+model NodeRun {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  run_id      String    @db.Uuid
+  node_id     String
+  node_type   String
+  status      String    @default("pending")
+  input       Json?
+  output      Json?
+  error       String?
+  attempt     Int       @default(1)
+  started_at  DateTime? @db.Timestamptz(6)
+  finished_at DateTime? @db.Timestamptz(6)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+
+  run WorkflowRun @relation(fields: [run_id], references: [id], onDelete: Cascade)
+
+  @@index([run_id, created_at], map: "idx_node_runs_run_id_created_at")
+  @@map("node_runs")
 }

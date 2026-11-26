@@ -2,11 +2,18 @@ import type { Node } from '@xyflow/react'
 
 import { ConfigSchemaFields } from '@/features/workflows/builder/ConfigSchemaFields'
 import { useNodeTypes } from '@/features/workflows/builder/hooks'
-import type { BuilderNodeData } from '@/features/workflows/builder/types'
+import { TriggerConfigFields } from '@/features/workflows/builder/TriggerConfigFields'
+import type { BuilderNodeData, TriggerNodeConfig } from '@/features/workflows/builder/types'
 
 type NodeInspectorPanelProps = {
+  workflowId?: string
   node: Node<BuilderNodeData> | null
   onUpdateConfig: (nodeId: string, patch: Record<string, unknown>) => void
+  onRunTest?: () => void
+  isRunningTest?: boolean
+  onSyncSchedule?: () => void
+  isSyncingSchedule?: boolean
+  scheduleStatus?: string | null
 }
 
 const kindLabels: Record<BuilderNodeData['type'], string> = {
@@ -19,7 +26,16 @@ const kindLabels: Record<BuilderNodeData['type'], string> = {
   notify: 'Notify node',
 }
 
-export function NodeInspectorPanel({ node, onUpdateConfig }: NodeInspectorPanelProps) {
+export function NodeInspectorPanel({
+  workflowId,
+  node,
+  onUpdateConfig,
+  onRunTest,
+  isRunningTest,
+  onSyncSchedule,
+  isSyncingSchedule,
+  scheduleStatus,
+}: NodeInspectorPanelProps) {
   const { data: catalog, isPending, isError } = useNodeTypes()
 
   if (!node) {
@@ -53,7 +69,19 @@ export function NodeInspectorPanel({ node, onUpdateConfig }: NodeInspectorPanelP
         {isError ? (
           <p className="text-sm text-destructive">Could not load node types.</p>
         ) : null}
-        {nodeType ? (
+        {nodeType && data.type === 'trigger' ? (
+          <TriggerConfigFields
+            workflowId={workflowId}
+            config={data.config as TriggerNodeConfig}
+            onPatch={(patch) => onUpdateConfig(node.id, patch)}
+            onRunTest={onRunTest}
+            isRunningTest={isRunningTest}
+            onSyncSchedule={onSyncSchedule}
+            isSyncingSchedule={isSyncingSchedule}
+            scheduleStatus={scheduleStatus}
+          />
+        ) : null}
+        {nodeType && data.type !== 'trigger' ? (
           <ConfigSchemaFields
             configSchema={nodeType.config_schema}
             config={data.config as Record<string, unknown>}

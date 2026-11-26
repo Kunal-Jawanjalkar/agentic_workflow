@@ -30,4 +30,18 @@ describe('mapWorkflowSummaryToListItem', () => {
 
     vi.useRealTimers()
   })
+
+  it('maps scheduler trigger type cleanly', () => {
+    const item = mapWorkflowSummaryToListItem({
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      name: 'Daily Digest',
+      description: null,
+      status: 'active',
+      version: 1,
+      trigger_type: 'scheduler',
+      updated_at: '2026-01-02T11:58:00.000Z',
+    })
+
+    expect(item.trigger).toEqual({ type: 'scheduler', label: 'Scheduler' })
+  })
 })

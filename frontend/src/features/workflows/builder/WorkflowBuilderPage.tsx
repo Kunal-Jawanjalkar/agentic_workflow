@@ -16,6 +16,7 @@ import {
 import type { BuilderNodeData, NodeType } from '@/features/workflows/builder/types'
 import { WorkflowBuilderCanvas } from '@/features/workflows/builder/WorkflowBuilderCanvas'
 import { WorkflowBuilderHeader } from '@/features/workflows/builder/WorkflowBuilderHeader'
+import { syncWorkflowSchedule, triggerManualRun } from '@/features/runs/api'
 import {
   fetchWorkflow,
   isWorkflowUuid,
@@ -28,7 +29,11 @@ import {
   useWorkflowAutosave,
 } from '@/features/workflows/use-workflow-autosave'
 import { isNewWorkflowRoute } from '@/features/workflows/workflow-route'
-import { graphSignature, parseWorkflowGraph } from '@/features/workflows/workflow-graph'
+import {
+  graphSignature,
+  parseWorkflowGraph,
+  serializeWorkflowGraph,
+} from '@/features/workflows/workflow-graph'
 
 const workflowTitles: Record<string, string> = {
   'support-triage': 'Support triage',
@@ -62,6 +67,10 @@ function WorkflowBuilderInner() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(
     useDemoGraph ? 'classify-ticket' : null,
   )
+  const [isRunningTest, setIsRunningTest] = useState(false)
+  const [runStatusMessage, setRunStatusMessage] = useState<string | null>(null)
+  const [isSyncingSchedule, setIsSyncingSchedule] = useState(false)
+  const [scheduleStatus, setScheduleStatus] = useState<string | null>(null)
 
   const { status: saveStatus, lastSavedAt, markHydrated } = useWorkflowAutosave(
     persistedId,
@@ -185,6 +194,57 @@ function WorkflowBuilderInner() {
     [setNodes],
   )
 
+  const handleRunTest = useCallback(async () => {
+    if (!persistedId || useDemoGraph) {
+      return
+    }
+    setIsRunningTest(true)
+    setRunStatusMessage(null)
+    try {
+      const current = graphRef.current
+      await updateWorkflow(persistedId, {
+        graph: serializeWorkflowGraph(current.nodes, current.edges),
+      })
+      const triggerNode = current.nodes.find((node) => node.data.type === 'trigger')
+      const defaultInput =
+        triggerNode?.data.type === 'trigger' &&
+        triggerNode.data.config.default_input &&
+        typeof triggerNode.data.config.default_input === 'object'
+          ? triggerNode.data.config.default_input
+          : {}
+      const run = await triggerManualRun(persistedId, defaultInput)
+      setRunStatusMessage(`Run ${run.id.slice(0, 8)} (${run.status})`)
+    } catch (error) {
+      setRunStatusMessage(error instanceof Error ? error.message : 'Failed to start run')
+    } finally {
+      setIsRunningTest(false)
+    }
+  }, [persistedId, useDemoGraph])
+
+  const handleSyncSchedule = useCallback(async () => {
+    if (!persistedId || useDemoGraph) {
+      return
+    }
+    setIsSyncingSchedule(true)
+    setScheduleStatus(null)
+    try {
+      const current = graphRef.current
+      await updateWorkflow(persistedId, {
+        graph: serializeWorkflowGraph(current.nodes, current.edges),
+      })
+      const result = await syncWorkflowSchedule(persistedId)
+      setScheduleStatus(
+        result.synced
+          ? `Synced (${result.schedule_id})`
+          : 'Schedule removed (not a scheduler trigger)',
+      )
+    } catch (error) {
+      setScheduleStatus(error instanceof Error ? error.message : 'Failed to sync schedule')
+    } finally {
+      setIsSyncingSchedule(false)
+    }
+  }, [persistedId, useDemoGraph])
+
   const isBootstrapping =
     (isNewRoute && createPhase === 'creating') ||
     (persistedId != null && hydratedWorkflowId !== persistedId && loadError == null)
@@ -218,6 +278,10 @@ function WorkflowBuilderInner() {
         savedLabel={savedLabel}
         titleEditable={Boolean(persistedId) && !useDemoGraph}
         onTitleChange={onRenameWorkflow}
+        onRunTest={persistedId && !useDemoGraph ? () => void handleRunTest() : undefined}
+        isRunningTest={isRunningTest}
+        runTestDisabled={!persistedId || useDemoGraph || !workflowHasTrigger(nodes)}
+        runStatusMessage={runStatusMessage}
       />
       <div className="flex min-h-0 flex-1">
         <AddNodePanel hasTrigger={workflowHasTrigger(nodes)} onAddNode={onAddNode} />
@@ -232,7 +296,16 @@ function WorkflowBuilderInner() {
             onSelectNode={setSelectedNodeId}
           />
         </div>
-        <NodeInspectorPanel node={selectedNode} onUpdateConfig={onUpdateNodeConfig} />
+        <NodeInspectorPanel
+          workflowId={persistedId}
+          node={selectedNode}
+          onUpdateConfig={onUpdateNodeConfig}
+          onRunTest={persistedId && !useDemoGraph ? () => void handleRunTest() : undefined}
+          isRunningTest={isRunningTest}
+          onSyncSchedule={persistedId && !useDemoGraph ? () => void handleSyncSchedule() : undefined}
+          isSyncingSchedule={isSyncingSchedule}
+          scheduleStatus={scheduleStatus}
+        />
       </div>
     </div>
   )

@@ -14,8 +14,15 @@ export function isBuilderNodeKind(value: string): value is BuilderNodeKind {
   return (builderNodeKinds as readonly string[]).includes(value)
 }
 
+export type TriggerType = 'manual' | 'webhook' | 'scheduler'
+
 export type TriggerNodeConfig = {
-  trigger_type: string
+  trigger_type: TriggerType | (string & {})
+  cron?: string
+  timezone?: string
+  webhook_method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  webhook_secret?: string
+  default_input?: Record<string, unknown>
 }
 
 export type LlmNodeConfig = {

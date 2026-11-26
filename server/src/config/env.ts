@@ -1,5 +1,14 @@
 import { plainToInstance } from 'class-transformer'
-import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Min, validateSync } from 'class-validator'
+import {
+  IsBoolean,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  Min,
+  validateSync,
+} from 'class-validator'
 
 export class EnvironmentVariables {
   @IsString()
@@ -9,6 +18,10 @@ export class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   SECRET_KEY!: string
+
+  @IsString()
+  @Matches(/^[\da-f]{64}$/i)
+  CREDENTIALS_ENCRYPTION_KEY!: string
 
   @IsInt()
   @Min(1)
@@ -25,6 +38,18 @@ export class EnvironmentVariables {
   @IsInt()
   @IsOptional()
   PORT = 8001
+
+  @IsString()
+  @IsOptional()
+  TEMPORAL_ADDRESS = 'localhost:7233'
+
+  @IsString()
+  @IsOptional()
+  TEMPORAL_NAMESPACE = 'default'
+
+  @IsString()
+  @IsOptional()
+  TEMPORAL_TASK_QUEUE = 'agentic-workflow'
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
@@ -32,7 +57,7 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
     ...config,
     ACCESS_TOKEN_EXPIRE_MINUTES: Number(config.ACCESS_TOKEN_EXPIRE_MINUTES ?? 10080),
     COOKIE_SECURE: config.COOKIE_SECURE === 'true' || config.COOKIE_SECURE === true,
-    PORT: Number(config.PORT ?? 8001),
+    PORT: Number(config.PORT),
   }
   const validated = plainToInstance(EnvironmentVariables, raw, {
     enableImplicitConversion: true,

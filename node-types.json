@@ -1,0 +1,94 @@
+{
+  "node_types": [
+    {
+      "type": "agent",
+      "version": 1,
+      "label": "Agent",
+      "category": "ai",
+      "icon": "robot",
+      "outputs": ["default"],
+      "config_schema": {
+        "properties": {
+          "credential_label": { "type": "string", "default": "" },
+          "model": { "type": "string", "default": "gpt-4o-mini" },
+          "system_prompt": { "type": "string", "default": "" },
+          "tools": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    {
+      "type": "condition",
+      "version": 1,
+      "label": "Condition",
+      "category": "logic",
+      "icon": "git-branch",
+      "outputs": ["yes", "no"],
+      "config_schema": {
+        "properties": {
+          "expression": {
+            "type": "string",
+            "default": "",
+            "description": "Boolean expression over workflow state"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "version": 1,
+      "label": "HTTP",
+      "category": "io",
+      "icon": "world-www",
+      "outputs": ["default"],
+      "config_schema": {
+        "properties": {
+          "url": { "type": "string", "default": "" },
+          "method": {
+            "type": "string",
+            "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+            "default": "GET"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "body": { "type": "string", "nullable": true, "default": null }
+        }
+      }
+    },
+    {
+      "type": "approval",
+      "version": 1,
+      "label": "Approval",
+      "category": "human",
+      "icon": "user-check",
+      "outputs": ["default"],
+      "config_schema": {
+        "properties": {
+          "message": { "type": "string", "default": "Approval required to continue" },
+          "assignee": { "type": "string", "nullable": true, "default": null }
+        }
+      }
+    },
+    {
+      "type": "notify",
+      "version": 1,
+      "label": "Notify",
+      "category": "io",
+      "icon": "bell",
+      "outputs": ["default"],
+      "config_schema": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": ["email", "slack", "webhook"],
+            "default": "email"
+          },
+          "to": { "type": "string", "default": "" },
+          "subject": { "type": "string", "default": "" },
+          "body": { "type": "string", "default": "" }
+        }
+      }
+    }
+  ]
+}

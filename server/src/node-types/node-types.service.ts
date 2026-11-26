@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common'
 
-import { NODE_TYPE_DESCRIPTORS } from '../nodes/node-type-descriptors'
+import { NodeRegistryService } from '../nodes/node-registry.service'
 
 @Injectable()
 export class NodeTypesService {
+  constructor(private readonly nodeRegistry: NodeRegistryService) {}
+
   list() {
-    return { node_types: NODE_TYPE_DESCRIPTORS }
+    return { node_types: this.nodeRegistry.listDescriptors() }
   }
 }

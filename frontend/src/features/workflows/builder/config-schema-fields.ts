@@ -3,6 +3,7 @@ export type JsonSchemaProperty = {
   title?: string
   default?: unknown
   enum?: string[]
+  nullable?: boolean
   description?: string | string[]
   anyOf?: JsonSchemaProperty[]
   items?: JsonSchemaProperty
@@ -44,6 +45,9 @@ function propertyLabel(key: string, property: JsonSchemaProperty): string {
 }
 
 function isNullableString(property: JsonSchemaProperty): boolean {
+  if (property.nullable === true && property.type === 'string') {
+    return true
+  }
   if (!property.anyOf) {
     return false
   }

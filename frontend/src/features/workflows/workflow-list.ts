@@ -4,7 +4,8 @@ import type { WorkflowListItem, WorkflowStatusKind } from '@/features/workflows/
 const TRIGGER_LABELS: Record<string, string> = {
   manual: 'Manual',
   webhook: 'Webhook',
-  schedule: 'Schedule',
+  scheduler: 'Scheduler',
+  schedule: 'Scheduler',
 }
 
 function statusForRecord(
@@ -40,7 +41,9 @@ function formatRelativeTime(iso: string): string {
 
 export function mapWorkflowSummaryToListItem(summary: WorkflowSummary): WorkflowListItem {
   const triggerType =
-    summary.trigger_type === 'webhook' || summary.trigger_type === 'manual'
+    summary.trigger_type === 'webhook' ||
+    summary.trigger_type === 'manual' ||
+    summary.trigger_type === 'scheduler'
       ? summary.trigger_type
       : 'manual'
   const triggerLabel =
