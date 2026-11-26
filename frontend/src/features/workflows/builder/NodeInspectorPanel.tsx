@@ -1,13 +1,20 @@
-import type { Node } from '@xyflow/react'
+import type { Edge, Node } from '@xyflow/react'
 
 import { ConfigSchemaFields } from '@/features/workflows/builder/ConfigSchemaFields'
 import { useNodeTypes } from '@/features/workflows/builder/hooks'
+import { LlmConfigFields } from '@/features/workflows/builder/LlmConfigFields'
 import { TriggerConfigFields } from '@/features/workflows/builder/TriggerConfigFields'
-import type { BuilderNodeData, TriggerNodeConfig } from '@/features/workflows/builder/types'
+import type {
+  BuilderNodeData,
+  LlmNodeConfig,
+  TriggerNodeConfig,
+} from '@/features/workflows/builder/types'
 
 type NodeInspectorPanelProps = {
   workflowId?: string
   node: Node<BuilderNodeData> | null
+  nodes?: Node<BuilderNodeData>[]
+  edges?: Edge[]
   onUpdateConfig: (nodeId: string, patch: Record<string, unknown>) => void
   onRunTest?: () => void
   isRunningTest?: boolean
@@ -29,6 +36,8 @@ const kindLabels: Record<BuilderNodeData['type'], string> = {
 export function NodeInspectorPanel({
   workflowId,
   node,
+  nodes = [],
+  edges = [],
   onUpdateConfig,
   onRunTest,
   isRunningTest,
@@ -81,7 +90,16 @@ export function NodeInspectorPanel({
             scheduleStatus={scheduleStatus}
           />
         ) : null}
-        {nodeType && data.type !== 'trigger' ? (
+        {nodeType && data.type === 'llm' ? (
+          <LlmConfigFields
+            nodeId={node.id}
+            config={data.config as LlmNodeConfig}
+            nodes={nodes}
+            edges={edges}
+            onPatch={(patch) => onUpdateConfig(node.id, patch)}
+          />
+        ) : null}
+        {nodeType && data.type !== 'trigger' && data.type !== 'llm' ? (
           <ConfigSchemaFields
             configSchema={nodeType.config_schema}
             config={data.config as Record<string, unknown>}

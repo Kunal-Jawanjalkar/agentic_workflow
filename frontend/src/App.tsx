@@ -8,6 +8,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
 import { RegisterPage } from '@/features/auth/RegisterPage'
 import { HomePage } from '@/features/home/HomePage'
+import { CredentialsPage } from '@/features/credentials/CredentialsPage'
 import { RunsPage } from '@/features/runs/RunsPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 
@@ -29,7 +30,7 @@ function App() {
           <Route path="runs" element={<RunsPage />} />
           <Route path="approvals" element={<PlaceholderPage title="Approvals" />} />
           <Route path="evals" element={<PlaceholderPage title="Evals" />} />
-          <Route path="credentials" element={<PlaceholderPage title="Credentials" />} />
+          <Route path="credentials" element={<CredentialsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route

@@ -299,6 +299,8 @@ function WorkflowBuilderInner() {
         <NodeInspectorPanel
           workflowId={persistedId}
           node={selectedNode}
+          nodes={nodes}
+          edges={edges}
           onUpdateConfig={onUpdateNodeConfig}
           onRunTest={persistedId && !useDemoGraph ? () => void handleRunTest() : undefined}
           isRunningTest={isRunningTest}
