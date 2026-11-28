@@ -19,6 +19,9 @@ type WorkflowBuilderHeaderProps = {
   isRunningTest?: boolean
   runTestDisabled?: boolean
   runStatusMessage?: string | null
+  onPublish?: () => void
+  isPublishing?: boolean
+  publishDisabled?: boolean
 }
 
 function EditableWorkflowTitle({
@@ -148,6 +151,9 @@ export function WorkflowBuilderHeader({
   isRunningTest = false,
   runTestDisabled = false,
   runStatusMessage,
+  onPublish,
+  isPublishing = false,
+  publishDisabled = false,
 }: WorkflowBuilderHeaderProps) {
   return (
     <header
@@ -190,8 +196,13 @@ export function WorkflowBuilderHeader({
         <Button type="button" variant="outline" size="sm">
           Run evals
         </Button>
-        <Button type="button" size="sm">
-          Publish
+        <Button
+          type="button"
+          size="sm"
+          disabled={publishDisabled || isPublishing}
+          onClick={onPublish}
+        >
+          {isPublishing ? 'Publishing…' : 'Publish'}
         </Button>
       </div>
     </header>

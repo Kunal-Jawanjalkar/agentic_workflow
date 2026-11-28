@@ -54,6 +54,19 @@ export function WorkflowBuilderCanvas({
     [nodes, setEdges],
   )
 
+  const onNodesDelete = useCallback(
+    (deleted: Node<BuilderNodeData>[]) => {
+      const deletedIds = new Set(deleted.map((node) => node.id))
+      setEdges((current) =>
+        current.filter((edge) => !deletedIds.has(edge.source) && !deletedIds.has(edge.target)),
+      )
+      if (selectedNodeId && deletedIds.has(selectedNodeId)) {
+        onSelectNode(null)
+      }
+    },
+    [onSelectNode, selectedNodeId, setEdges],
+  )
+
   useEffect(() => {
     if (nodes.length === 0) {
       return
@@ -75,6 +88,7 @@ export function WorkflowBuilderCanvas({
         nodeTypes={workflowBuilderNodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodesDelete={onNodesDelete}
         onConnect={onConnect}
         isValidConnection={(connection) => triggerAllowsConnection(nodes, edges, connection)}
         defaultEdgeOptions={workflowEdgeOptions}

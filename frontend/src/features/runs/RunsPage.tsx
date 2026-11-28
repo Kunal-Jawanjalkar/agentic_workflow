@@ -42,7 +42,7 @@ export function RunsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Runs</h1>
         <p className="text-sm text-muted-foreground">
-          Temporal workflow executions and per-node outputs.
+          Workflow executions and per-node outputs.
         </p>
       </div>
 
@@ -78,7 +78,10 @@ export function RunsPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{run.trigger_type}</span>
+                  <span>
+                    {run.trigger_type}
+                    {run.is_test ? ' · Test' : ''}
+                  </span>
                   <span>{new Date(run.created_at).toLocaleString()}</span>
                 </div>
               </button>
@@ -94,7 +97,7 @@ export function RunsPage() {
                   <div>
                     <h2 className="font-semibold">{detailQuery.data.workflow_name ?? 'Workflow Run'}</h2>
                     <p className="text-xs text-muted-foreground">
-                      Temporal ID: {detailQuery.data.temporal_workflow_id ?? '—'}
+                      Run ID: {detailQuery.data.id}
                     </p>
                   </div>
                   <span

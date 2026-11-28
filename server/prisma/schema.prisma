@@ -95,20 +95,19 @@ model Trigger {
 }
 
 model WorkflowRun {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workflow_id          String    @db.Uuid
-  workflow_version_id  String    @db.Uuid
-  owner_id             String    @db.Uuid
-  status               String    @default("pending")
-  trigger_type         String
-  trigger_input        Json      @default("{}")
-  output               Json?
-  error                String?
-  temporal_workflow_id String?
-  temporal_run_id      String?
-  started_at           DateTime? @db.Timestamptz(6)
-  finished_at          DateTime? @db.Timestamptz(6)
-  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workflow_id         String    @db.Uuid
+  workflow_version_id String    @db.Uuid
+  owner_id            String    @db.Uuid
+  status              String    @default("pending")
+  trigger_type        String
+  is_test             Boolean   @default(false)
+  trigger_input       Json      @default("{}")
+  output              Json?
+  error               String?
+  started_at          DateTime? @db.Timestamptz(6)
+  finished_at         DateTime? @db.Timestamptz(6)
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
 
   workflow         Workflow        @relation(fields: [workflow_id], references: [id], onDelete: Cascade)
   workflow_version WorkflowVersion @relation(fields: [workflow_version_id], references: [id], onDelete: Cascade)

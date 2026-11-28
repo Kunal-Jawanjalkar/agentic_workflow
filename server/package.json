@@ -7,6 +7,7 @@
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "node dist/main",
+    "start:worker": "node dist/worker",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "test": "jest",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
@@ -20,6 +21,7 @@
     "@langchain/google-genai": "^2.3.7",
     "@langchain/langgraph": "^1.7.5",
     "@langchain/openai": "^1.8.5",
+    "@nestjs/bullmq": "^12.0.2",
     "@nestjs/common": "^11.0.12",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.12",
@@ -27,14 +29,12 @@
     "@nestjs/platform-fastify": "^11.0.12",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
-    "@temporalio/activity": "^1.27.0",
-    "@temporalio/client": "^1.27.0",
-    "@temporalio/worker": "^1.27.0",
-    "@temporalio/workflow": "^1.27.0",
     "bcrypt": "^6.0.0",
+    "bullmq": "^6.7.10",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "dotenv": "^18.0.10",
+    "ioredis": "^6.1.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
@@ -62,8 +62,18 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "allowJs": true
+          }
+        }
+      ]
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@nestjs/bullmq|@nestjs/bull-shared)/)"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],

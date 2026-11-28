@@ -104,4 +104,21 @@ describe('NodeInspectorPanel', () => {
 
     expect(onUpdateConfig).toHaveBeenCalledWith('trigger-1', { trigger_type: 'webhook' })
   })
+
+  it('calls onDeleteNode when clicking Delete node', async () => {
+    const user = userEvent.setup()
+    const onDeleteNode = vi.fn()
+
+    render(
+      <NodeInspectorPanel
+        node={triggerNode()}
+        onUpdateConfig={vi.fn()}
+        onDeleteNode={onDeleteNode}
+      />,
+      { wrapper: createQueryWrapper() },
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Delete node' }))
+    expect(onDeleteNode).toHaveBeenCalledWith('trigger-1')
+  })
 })

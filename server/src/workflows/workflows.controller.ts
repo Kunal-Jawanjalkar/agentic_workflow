@@ -50,4 +50,13 @@ export class WorkflowsController {
   ) {
     return this.workflowsService.updateDraft(user.id, workflowId, body)
   }
+
+  @Post(':workflowId/publish')
+  @HttpCode(HttpStatus.OK)
+  publish(
+    @CurrentUser() user: UserPublicDto,
+    @Param('workflowId', ParseUUIDPipe) workflowId: string,
+  ) {
+    return this.workflowsService.publishWorkflow(user.id, workflowId)
+  }
 }

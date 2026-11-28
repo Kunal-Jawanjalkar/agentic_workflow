@@ -22,11 +22,10 @@ export type WorkflowRunRecord = {
   workflow_name?: string
   status: string
   trigger_type: string
+  is_test?: boolean
   trigger_input: unknown
   output: unknown
   error: string | null
-  temporal_workflow_id: string | null
-  temporal_run_id: string | null
   node_run_count?: number
   node_runs?: NodeRunRecord[]
   started_at: string | null
@@ -37,10 +36,11 @@ export type WorkflowRunRecord = {
 export function triggerManualRun(
   workflowId: string,
   input: Record<string, unknown> = {},
+  testMode = false,
 ): Promise<WorkflowRunRecord> {
   return apiRequest<WorkflowRunRecord>(`/api/v1/workflows/${workflowId}/runs`, {
     method: 'POST',
-    body: JSON.stringify({ input }),
+    body: JSON.stringify({ input, test_mode: testMode }),
   })
 }
 

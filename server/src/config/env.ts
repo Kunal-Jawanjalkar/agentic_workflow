@@ -41,15 +41,20 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
-  TEMPORAL_ADDRESS = 'localhost:7233'
+  REDIS_HOST = 'localhost'
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  REDIS_PORT = 6379
 
   @IsString()
   @IsOptional()
-  TEMPORAL_NAMESPACE = 'default'
+  REDIS_PASSWORD?: string
 
-  @IsString()
+  @IsBoolean()
   @IsOptional()
-  TEMPORAL_TASK_QUEUE = 'agentic-workflow'
+  WORKER_ENABLED = true
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
@@ -57,7 +62,12 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
     ...config,
     ACCESS_TOKEN_EXPIRE_MINUTES: Number(config.ACCESS_TOKEN_EXPIRE_MINUTES ?? 10080),
     COOKIE_SECURE: config.COOKIE_SECURE === 'true' || config.COOKIE_SECURE === true,
-    PORT: Number(config.PORT),
+    PORT: Number(config.PORT ?? 8001),
+    REDIS_PORT: Number(config.REDIS_PORT ?? 6379),
+    WORKER_ENABLED:
+      config.WORKER_ENABLED === undefined
+        ? true
+        : config.WORKER_ENABLED === 'true' || config.WORKER_ENABLED === true,
   }
   const validated = plainToInstance(EnvironmentVariables, raw, {
     enableImplicitConversion: true,

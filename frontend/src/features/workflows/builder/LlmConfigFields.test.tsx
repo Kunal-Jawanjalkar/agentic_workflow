@@ -134,7 +134,7 @@ describe('LlmConfigFields', () => {
 
     expect(onPatch).toHaveBeenCalledWith({
       credential_label: 'Gemini Key',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
     })
   })
 
@@ -147,7 +147,7 @@ describe('LlmConfigFields', () => {
         nodeId="llm-2"
         config={{
           credential_label: 'Gemini Key',
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.5-flash',
           prompt: '',
           structured_output: false,
         }}
@@ -160,8 +160,8 @@ describe('LlmConfigFields', () => {
     await screen.findByRole('option', { name: 'Gemini Key (Google (Gemini))' })
     expect(screen.queryByRole('option', { name: 'gpt-4o-mini' })).not.toBeInTheDocument()
 
-    await user.selectOptions(screen.getByLabelText('Model'), 'gemini-2.5-pro')
-    expect(onPatch).toHaveBeenCalledWith({ model: 'gemini-2.5-pro' })
+    await user.selectOptions(screen.getByLabelText('Model'), 'gemini-3.1-pro-preview')
+    expect(onPatch).toHaveBeenCalledWith({ model: 'gemini-3.1-pro-preview' })
   })
 
   it('inserts previous node output tokens into the prompt', async () => {

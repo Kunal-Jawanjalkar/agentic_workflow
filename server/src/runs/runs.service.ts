@@ -2,26 +2,16 @@ import { HttpStatus, Injectable } from '@nestjs/common'
 import { timingSafeEqual } from 'node:crypto'
 
 import { HttpDetailException } from '../common/http-detail.exception'
-import { TemporalService } from '../engine/temporal.service'
-import type { WorkflowGraphPayload } from '../engine/temporal/workflow'
+import {
+  findTriggerNode,
+  parseWorkflowGraph,
+  WorkflowGraphPayload,
+} from '../engine/workflow-graph.helpers'
+import { WorkflowQueueService } from '../engine/workflow-queue.service'
 import { Prisma } from '../generated/prisma/client'
 import { TriggerNodeConfig, TriggerNodeExecutor } from '../nodes/trigger-node'
 import { PrismaService } from '../prisma/prisma.service'
-
-function parseGraphPayload(graph: Prisma.JsonValue): WorkflowGraphPayload {
-  if (!graph || typeof graph !== 'object' || Array.isArray(graph)) {
-    throw new HttpDetailException(HttpStatus.BAD_REQUEST, 'Workflow graph is empty or invalid')
-  }
-  const rawNodes = (graph as { nodes?: unknown }).nodes
-  const rawEdges = (graph as { edges?: unknown }).edges
-  if (!Array.isArray(rawNodes) || rawNodes.length === 0) {
-    throw new HttpDetailException(HttpStatus.BAD_REQUEST, 'Workflow graph has no nodes to run')
-  }
-  return {
-    nodes: rawNodes as WorkflowGraphPayload['nodes'],
-    edges: Array.isArray(rawEdges) ? (rawEdges as WorkflowGraphPayload['edges']) : [],
-  }
-}
+import { hashTriggerSecret } from '../workflows/workflows.service'
 
 function secretsEqual(expected: string, actual: string): boolean {
   const expectedBuf = Buffer.from(expected, 'utf8')
@@ -32,23 +22,30 @@ function secretsEqual(expected: string, actual: string): boolean {
   return timingSafeEqual(expectedBuf, actualBuf)
 }
 
+function asPlainObject(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+  return {}
+}
+
 @Injectable()
 export class RunsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly temporalService: TemporalService,
     private readonly triggerNode: TriggerNodeExecutor,
+    private readonly workflowQueue: WorkflowQueueService,
   ) {}
 
-  private extractTriggerConfig(graph: WorkflowGraphPayload): TriggerNodeConfig {
-    const trigger = graph.nodes.find((node) => node.data?.type === 'trigger')
-    if (!trigger) {
-      throw new HttpDetailException(
-        HttpStatus.BAD_REQUEST,
-        'Workflow must contain a Trigger node to run',
-      )
+  private extractTrigger(graph: WorkflowGraphPayload): {
+    nodeId: string
+    config: TriggerNodeConfig
+  } {
+    const trigger = findTriggerNode(graph)
+    return {
+      nodeId: trigger.id,
+      config: this.triggerNode.validateConfig(trigger.data.config),
     }
-    return this.triggerNode.validateConfig(trigger.data.config)
   }
 
   private async loadWorkflowWithCurrentVersion(workflowId: string, ownerId?: string) {
@@ -70,12 +67,19 @@ export class RunsService {
     return { workflow, version }
   }
 
-  private async startRun(params: {
+  private async loadEnabledTrigger(workflowId: string) {
+    return this.prisma.trigger.findFirst({
+      where: { workflow_id: workflowId, is_enabled: true },
+    })
+  }
+
+  private async enqueueRun(params: {
     workflowId: string
     workflowVersionId: string
     ownerId: string
     triggerType: string
-    graph: WorkflowGraphPayload
+    isTest: boolean
+    triggerNodeId: string
     triggerInput: Record<string, unknown>
   }) {
     const run = await this.prisma.workflowRun.create({
@@ -85,40 +89,34 @@ export class RunsService {
         owner_id: params.ownerId,
         status: 'pending',
         trigger_type: params.triggerType,
+        is_test: params.isTest,
         trigger_input: params.triggerInput as Prisma.InputJsonValue,
       },
     })
 
     try {
-      const started = await this.temporalService.startWorkflowRun({
+      await this.workflowQueue.enqueueNode({
         runId: run.id,
         ownerId: params.ownerId,
         workflowId: params.workflowId,
         workflowVersionId: params.workflowVersionId,
-        triggerType: params.triggerType,
-        graph: params.graph,
-        triggerInput: params.triggerInput,
+        nodeId: params.triggerNodeId,
       })
-
-      const updated = await this.prisma.workflowRun.update({
-        where: { id: run.id },
-        data: {
-          temporal_workflow_id: started.temporalWorkflowId,
-          temporal_run_id: started.temporalRunId,
-        },
-      })
-      return this.serializeRun(updated)
+      return this.serializeRun(run)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       await this.prisma.workflowRun.update({
         where: { id: run.id },
         data: {
           status: 'failed',
-          error: message,
+          error: `Failed to enqueue run: ${message}`,
           finished_at: new Date(),
         },
       })
-      throw error
+      throw new HttpDetailException(
+        HttpStatus.SERVICE_UNAVAILABLE,
+        `Could not enqueue workflow run: ${message}`,
+      )
     }
   }
 
@@ -126,17 +124,46 @@ export class RunsService {
     ownerId: string,
     workflowId: string,
     input: Record<string, unknown> = {},
+    testMode = false,
   ) {
     const { workflow, version } = await this.loadWorkflowWithCurrentVersion(workflowId, ownerId)
-    const graph = parseGraphPayload(version.graph)
-    const triggerConfig = this.extractTriggerConfig(graph)
+    const graph = parseWorkflowGraph(version.graph)
+    const triggerNode = this.extractTrigger(graph)
 
-    return this.startRun({
+    if (testMode) {
+      return this.enqueueRun({
+        workflowId: workflow.id,
+        workflowVersionId: version.id,
+        ownerId,
+        triggerType: triggerNode.config.trigger_type,
+        isTest: true,
+        triggerNodeId: triggerNode.nodeId,
+        triggerInput: input,
+      })
+    }
+
+    if (workflow.status !== 'active') {
+      throw new HttpDetailException(
+        HttpStatus.BAD_REQUEST,
+        'Workflow is in draft mode. Publish the workflow or run in test mode.',
+      )
+    }
+
+    const publishedTrigger = await this.loadEnabledTrigger(workflow.id)
+    if (!publishedTrigger) {
+      throw new HttpDetailException(
+        HttpStatus.BAD_REQUEST,
+        'Workflow has no enabled trigger. Publish the workflow first.',
+      )
+    }
+
+    return this.enqueueRun({
       workflowId: workflow.id,
       workflowVersionId: version.id,
       ownerId,
-      triggerType: triggerConfig.trigger_type,
-      graph,
+      triggerType: publishedTrigger.type,
+      isTest: false,
+      triggerNodeId: triggerNode.nodeId,
       triggerInput: input,
     })
   }
@@ -151,17 +178,29 @@ export class RunsService {
     },
   ) {
     const { workflow, version } = await this.loadWorkflowWithCurrentVersion(workflowId)
-    const graph = parseGraphPayload(version.graph)
-    const triggerConfig = this.extractTriggerConfig(graph)
-
-    if (triggerConfig.trigger_type !== 'webhook') {
+    if (workflow.status !== 'active') {
       throw new HttpDetailException(
         HttpStatus.BAD_REQUEST,
-        'Workflow trigger is not configured as a webhook',
+        'Workflow is in draft mode and cannot accept webhook runs until published',
       )
     }
 
-    const expectedMethod = triggerConfig.webhook_method ?? 'POST'
+    const publishedTrigger = await this.loadEnabledTrigger(workflow.id)
+    if (!publishedTrigger || publishedTrigger.type !== 'webhook') {
+      throw new HttpDetailException(
+        HttpStatus.BAD_REQUEST,
+        'Workflow has no active webhook trigger',
+      )
+    }
+
+    const graph = parseWorkflowGraph(version.graph)
+    const triggerNode = this.extractTrigger(graph)
+    const publishedConfig = asPlainObject(publishedTrigger.config)
+    const expectedMethod =
+      typeof publishedConfig.webhook_method === 'string'
+        ? publishedConfig.webhook_method
+        : 'POST'
+
     if (request.method.toUpperCase() !== expectedMethod.toUpperCase()) {
       throw new HttpDetailException(
         HttpStatus.METHOD_NOT_ALLOWED,
@@ -169,20 +208,24 @@ export class RunsService {
       )
     }
 
-    if (triggerConfig.webhook_secret) {
+    if (publishedTrigger.secret_hash) {
       const rawHeader = request.headers['x-webhook-secret']
       const provided = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader
-      if (typeof provided !== 'string' || !secretsEqual(triggerConfig.webhook_secret, provided)) {
+      if (
+        typeof provided !== 'string' ||
+        !secretsEqual(publishedTrigger.secret_hash, hashTriggerSecret(provided))
+      ) {
         throw new HttpDetailException(HttpStatus.UNAUTHORIZED, 'Invalid webhook secret')
       }
     }
 
-    return this.startRun({
+    return this.enqueueRun({
       workflowId: workflow.id,
       workflowVersionId: version.id,
       ownerId: workflow.owner_id,
       triggerType: 'webhook',
-      graph,
+      isTest: false,
+      triggerNodeId: triggerNode.nodeId,
       triggerInput: {
         method: request.method.toUpperCase(),
         headers: request.headers,
@@ -193,29 +236,39 @@ export class RunsService {
   }
 
   async syncWorkflowSchedule(ownerId: string, workflowId: string) {
-    const { workflow, version } = await this.loadWorkflowWithCurrentVersion(workflowId, ownerId)
-    const graph = parseGraphPayload(version.graph)
-    const triggerConfig = this.extractTriggerConfig(graph)
+    const { workflow } = await this.loadWorkflowWithCurrentVersion(workflowId, ownerId)
+    if (workflow.status !== 'active') {
+      throw new HttpDetailException(
+        HttpStatus.BAD_REQUEST,
+        'Publish the workflow before syncing its schedule',
+      )
+    }
 
-    if (triggerConfig.trigger_type !== 'scheduler') {
-      await this.temporalService.deleteSchedule(workflow.id)
+    const publishedTrigger = await this.loadEnabledTrigger(workflow.id)
+    if (!publishedTrigger || publishedTrigger.type !== 'scheduler') {
+      await this.workflowQueue.deleteSchedule(workflow.id)
       return { synced: false, schedule_id: null }
     }
 
-    if (!triggerConfig.cron) {
+    const publishedConfig = asPlainObject(publishedTrigger.config)
+    const cron = typeof publishedConfig.cron === 'string' ? publishedConfig.cron.trim() : ''
+    if (!cron) {
       throw new HttpDetailException(
         HttpStatus.BAD_REQUEST,
         'Scheduler trigger requires a cron expression',
       )
     }
 
-    const result = await this.temporalService.syncSchedule({
+    const timezone =
+      typeof publishedConfig.timezone === 'string' && publishedConfig.timezone.trim().length > 0
+        ? publishedConfig.timezone.trim()
+        : 'UTC'
+
+    const result = await this.workflowQueue.syncSchedule({
       ownerId,
       workflowId: workflow.id,
-      workflowVersionId: version.id,
-      graph,
-      cron: triggerConfig.cron,
-      timezone: triggerConfig.timezone ?? 'UTC',
+      cron,
+      timezone,
     })
 
     return { synced: true, schedule_id: result.scheduleId }
@@ -282,11 +335,10 @@ export class RunsService {
     workflow_version_id: string
     status: string
     trigger_type: string
+    is_test: boolean
     trigger_input: Prisma.JsonValue
     output: Prisma.JsonValue | null
     error: string | null
-    temporal_workflow_id: string | null
-    temporal_run_id: string | null
     started_at: Date | null
     finished_at: Date | null
     created_at: Date
@@ -297,11 +349,10 @@ export class RunsService {
       workflow_version_id: run.workflow_version_id,
       status: run.status,
       trigger_type: run.trigger_type,
+      is_test: run.is_test,
       trigger_input: run.trigger_input,
       output: run.output,
       error: run.error,
-      temporal_workflow_id: run.temporal_workflow_id,
-      temporal_run_id: run.temporal_run_id,
       started_at: run.started_at?.toISOString() ?? null,
       finished_at: run.finished_at?.toISOString() ?? null,
       created_at: run.created_at.toISOString(),

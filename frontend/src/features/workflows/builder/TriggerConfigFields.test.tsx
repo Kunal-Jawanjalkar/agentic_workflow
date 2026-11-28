@@ -62,7 +62,7 @@ describe('TriggerConfigFields', () => {
     await user.selectOptions(screen.getByLabelText('Schedule Preset'), '0 * * * *')
     expect(onPatch).toHaveBeenCalledWith({ cron: '0 * * * *' })
 
-    await user.click(screen.getByRole('button', { name: /Sync Temporal schedule/i }))
+    await user.click(screen.getByRole('button', { name: /Sync schedule/i }))
     expect(onSyncSchedule).toHaveBeenCalledTimes(1)
   })
 })

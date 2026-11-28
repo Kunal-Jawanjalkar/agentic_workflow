@@ -1,5 +1,7 @@
+import { Trash2 } from 'lucide-react'
 import type { Edge, Node } from '@xyflow/react'
 
+import { Button } from '@/components/ui/button'
 import { ConfigSchemaFields } from '@/features/workflows/builder/ConfigSchemaFields'
 import { useNodeTypes } from '@/features/workflows/builder/hooks'
 import { LlmConfigFields } from '@/features/workflows/builder/LlmConfigFields'
@@ -16,6 +18,7 @@ type NodeInspectorPanelProps = {
   nodes?: Node<BuilderNodeData>[]
   edges?: Edge[]
   onUpdateConfig: (nodeId: string, patch: Record<string, unknown>) => void
+  onDeleteNode?: (nodeId: string) => void
   onRunTest?: () => void
   isRunningTest?: boolean
   onSyncSchedule?: () => void
@@ -39,6 +42,7 @@ export function NodeInspectorPanel({
   nodes = [],
   edges = [],
   onUpdateConfig,
+  onDeleteNode,
   onRunTest,
   isRunningTest,
   onSyncSchedule,
@@ -66,9 +70,23 @@ export function NodeInspectorPanel({
       className="flex w-80 shrink-0 flex-col border-l border-border/60 bg-card/20"
       aria-label="Node configuration"
     >
-      <div className="border-b border-border/60 px-4 py-4">
-        <h2 className="font-semibold">{data.label}</h2>
-        <p className="text-sm text-muted-foreground">{kindLabels[data.type]}</p>
+      <div className="flex items-start justify-between gap-2 border-b border-border/60 px-4 py-4">
+        <div className="min-w-0">
+          <h2 className="truncate font-semibold">{data.label}</h2>
+          <p className="text-sm text-muted-foreground">{kindLabels[data.type]}</p>
+        </div>
+        {onDeleteNode ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+            aria-label="Delete node"
+            onClick={() => onDeleteNode(node.id)}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">

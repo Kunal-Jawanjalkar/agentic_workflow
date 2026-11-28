@@ -21,9 +21,13 @@ export const MODELS_BY_PROVIDER: Record<ProviderKey, { value: string; label: str
     { value: 'claude-3-5-haiku-latest', label: 'claude-3-5-haiku-latest' },
   ],
   google: [
-    { value: 'gemini-2.5-flash', label: 'gemini-2.5-flash' },
-    { value: 'gemini-2.5-pro', label: 'gemini-2.5-pro' },
-    { value: 'gemini-2.0-flash', label: 'gemini-2.0-flash' },
+    { value: 'gemini-3.5-flash', label: 'gemini-3.5-flash' },
+    { value: 'gemini-3.5-flash-lite', label: 'gemini-3.5-flash-lite' },
+    { value: 'gemini-3.8-flash', label: 'gemini-3.8-flash' },
+    { value: 'gemini-3-flash-preview', label: 'gemini-3-flash-preview' },
+    { value: 'gemini-3.1-pro-preview', label: 'gemini-3.1-pro-preview' },
+    { value: 'gemini-flash-latest', label: 'gemini-flash-latest' },
+    { value: 'gemini-pro-latest', label: 'gemini-pro-latest' },
   ],
 }
 

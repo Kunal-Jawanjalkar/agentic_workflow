@@ -144,14 +144,14 @@ export class LlmNodeExecutor implements NodeExecutor<LlmNodeConfig> {
     const normalized = provider.trim().toLowerCase()
     switch (normalized) {
       case 'openai':
-        return new ChatOpenAI({ model, apiKey })
+        return new ChatOpenAI({ model, apiKey, maxRetries: 0 })
       case 'anthropic':
-        return new ChatAnthropic({ model, apiKey })
+        return new ChatAnthropic({ model, apiKey, maxRetries: 0 })
       case 'google':
       case 'gemini':
       case 'google-genai':
       case 'google_genai':
-        return new ChatGoogleGenerativeAI({ model, apiKey })
+        return new ChatGoogleGenerativeAI({ model, apiKey, maxRetries: 0 })
       default:
         throw new HttpDetailException(
           HttpStatus.BAD_REQUEST,
@@ -190,7 +190,9 @@ export class LlmNodeExecutor implements NodeExecutor<LlmNodeConfig> {
             ]
           : [new HumanMessage(state.prompt)]
 
-        const aiMessage = await chatModel.invoke(messages)
+        const aiMessage = await chatModel.invoke(messages, {
+          signal: AbortSignal.timeout(45_000),
+        })
         const text = extractMessageText(aiMessage.content)
         let parsed: unknown = null
         if (state.structuredOutput) {

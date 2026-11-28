@@ -1,10 +1,18 @@
-import { Injectable } from '@nestjs/common'
-import { Prisma } from '../generated/prisma/client'
+import { HttpStatus, Injectable } from '@nestjs/common'
+import { createHash } from 'node:crypto'
 
 import { HttpDetailException } from '../common/http-detail.exception'
+import { findTriggerNode, parseWorkflowGraph } from '../engine/workflow-graph.helpers'
+import { WorkflowQueueService } from '../engine/workflow-queue.service'
+import { Prisma } from '../generated/prisma/client'
+import { TriggerNodeExecutor } from '../nodes/trigger-node'
 import { PrismaService } from '../prisma/prisma.service'
 
 import { CreateWorkflowDto, UpdateWorkflowDto, WorkflowGraphDto } from './workflows.dto'
+
+export function hashTriggerSecret(secret: string): string {
+  return createHash('sha256').update(secret, 'utf8').digest('hex')
+}
 
 const EMPTY_GRAPH: WorkflowGraphDto = { nodes: [], edges: [] }
 
@@ -42,7 +50,11 @@ function triggerTypeFromGraph(graph: Prisma.JsonValue): string | null {
 
 @Injectable()
 export class WorkflowsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly triggerNode: TriggerNodeExecutor,
+    private readonly workflowQueue: WorkflowQueueService,
+  ) {}
 
   private async currentVersion(workflowId: string, currentVersionId: string | null) {
     if (currentVersionId == null) {
@@ -178,5 +190,66 @@ export class WorkflowsService {
     }
 
     return this.workflowResponse(existing)
+  }
+
+  async publishWorkflow(ownerId: string, workflowId: string) {
+    const existing = await this.prisma.workflow.findFirst({
+      where: { id: workflowId, owner_id: ownerId },
+    })
+    if (existing == null) {
+      throw new HttpDetailException(HttpStatus.NOT_FOUND, 'Workflow not found')
+    }
+
+    const version = await this.currentVersion(existing.id, existing.current_version_id)
+    const graph = parseWorkflowGraph(version.graph)
+    const triggerNode = findTriggerNode(graph)
+    const triggerConfig = this.triggerNode.validateConfig(triggerNode.data.config)
+
+    if (triggerConfig.trigger_type === 'scheduler' && !triggerConfig.cron) {
+      throw new HttpDetailException(
+        HttpStatus.BAD_REQUEST,
+        'Scheduler trigger requires a cron expression before publishing',
+      )
+    }
+
+    const { webhook_secret, ...publicConfig } = triggerConfig
+    const secretHash = webhook_secret ? hashTriggerSecret(webhook_secret) : null
+
+    const published = await this.prisma.$transaction(async (tx) => {
+      await tx.trigger.deleteMany({
+        where: { workflow_id: existing.id },
+      })
+
+      await tx.trigger.create({
+        data: {
+          workflow_id: existing.id,
+          type: triggerConfig.trigger_type,
+          config: publicConfig as Prisma.InputJsonValue,
+          secret_hash: secretHash,
+          is_enabled: true,
+        },
+      })
+
+      return tx.workflow.update({
+        where: { id: existing.id },
+        data: {
+          status: 'active',
+          updated_at: new Date(),
+        },
+      })
+    })
+
+    if (triggerConfig.trigger_type === 'scheduler' && triggerConfig.cron) {
+      await this.workflowQueue.syncSchedule({
+        ownerId,
+        workflowId: existing.id,
+        cron: triggerConfig.cron,
+        timezone: triggerConfig.timezone ?? 'UTC',
+      })
+    } else {
+      await this.workflowQueue.deleteSchedule(existing.id)
+    }
+
+    return this.workflowResponse(published)
   }
 }

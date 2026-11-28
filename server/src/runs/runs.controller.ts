@@ -32,7 +32,12 @@ export class RunsController {
     @Param('workflowId', ParseUUIDPipe) workflowId: string,
     @Body() body: TriggerManualRunDto,
   ) {
-    return this.runsService.triggerManualRun(user.id, workflowId, body?.input ?? {})
+    return this.runsService.triggerManualRun(
+      user.id,
+      workflowId,
+      body?.input ?? {},
+      body?.test_mode === true,
+    )
   }
 
   @Get('workflows/:workflowId/runs')

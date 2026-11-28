@@ -34,7 +34,7 @@ const HTTP_METHODS = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE'] as const
 const TRIGGER_DESCRIPTIONS: Record<TriggerType, string> = {
   manual: 'Starts when you click Run test or trigger a run via the API.',
   webhook: 'Starts when an external system sends an HTTP request to the webhook URL.',
-  scheduler: 'Starts automatically on a recurring cron schedule managed by Temporal.',
+  scheduler: 'Starts automatically on a recurring cron schedule.',
 }
 
 function normalizeTriggerType(value: string | undefined): TriggerType {
@@ -280,7 +280,7 @@ export function TriggerConfigFields({
                 onClick={onSyncSchedule}
               >
                 <RefreshCw className="size-3.5" />
-                {isSyncingSchedule ? 'Syncing schedule…' : 'Sync Temporal schedule'}
+                {isSyncingSchedule ? 'Syncing schedule…' : 'Sync schedule'}
               </Button>
               {scheduleStatus ? (
                 <p className="text-xs text-muted-foreground">{scheduleStatus}</p>

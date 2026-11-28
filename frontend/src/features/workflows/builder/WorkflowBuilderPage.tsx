@@ -9,6 +9,7 @@ import {
   workflowHasTrigger,
 } from '@/features/workflows/builder/append-workflow-step'
 import { NodeInspectorPanel } from '@/features/workflows/builder/NodeInspectorPanel'
+import { removeWorkflowNode } from '@/features/workflows/builder/remove-workflow-node'
 import {
   supportTriageEdges,
   supportTriageNodes,
@@ -20,6 +21,7 @@ import { syncWorkflowSchedule, triggerManualRun } from '@/features/runs/api'
 import {
   fetchWorkflow,
   isWorkflowUuid,
+  publishWorkflow,
   updateWorkflow,
   workflowQueryKeys,
 } from '@/features/workflows/api'
@@ -48,6 +50,8 @@ function WorkflowBuilderInner() {
   const persistedId = isWorkflowUuid(workflowId) ? workflowId : undefined
 
   const [workflowName, setWorkflowName] = useState('Untitled workflow')
+  const [workflowStatus, setWorkflowStatus] = useState<'draft' | 'active' | 'archived'>('draft')
+  const [workflowVersion, setWorkflowVersion] = useState(1)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [createPhase, setCreatePhase] = useState<'idle' | 'creating' | 'error'>(
     isNewRoute ? 'creating' : 'idle',
@@ -68,6 +72,7 @@ function WorkflowBuilderInner() {
     useDemoGraph ? 'classify-ticket' : null,
   )
   const [isRunningTest, setIsRunningTest] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
   const [runStatusMessage, setRunStatusMessage] = useState<string | null>(null)
   const [isSyncingSchedule, setIsSyncingSchedule] = useState(false)
   const [scheduleStatus, setScheduleStatus] = useState<string | null>(null)
@@ -107,6 +112,8 @@ function WorkflowBuilderInner() {
         }
         const { nodes: loadedNodes, edges: loadedEdges } = parseWorkflowGraph(workflow.graph)
         setWorkflowName(workflow.name)
+        setWorkflowStatus(workflow.status)
+        setWorkflowVersion(workflow.version)
         setNodes(loadedNodes)
         setEdges(loadedEdges)
         markHydrated(graphSignature(loadedNodes, loadedEdges))
@@ -194,6 +201,19 @@ function WorkflowBuilderInner() {
     [setNodes],
   )
 
+  const onDeleteNode = useCallback(
+    (nodeId: string) => {
+      const current = graphRef.current
+      const next = removeWorkflowNode(current.nodes, current.edges, nodeId)
+      setNodes(next.nodes)
+      setEdges(next.edges)
+      if (selectedNodeId === nodeId) {
+        setSelectedNodeId(null)
+      }
+    },
+    [selectedNodeId, setEdges, setNodes],
+  )
+
   const handleRunTest = useCallback(async () => {
     if (!persistedId || useDemoGraph) {
       return
@@ -212,14 +232,37 @@ function WorkflowBuilderInner() {
         typeof triggerNode.data.config.default_input === 'object'
           ? triggerNode.data.config.default_input
           : {}
-      const run = await triggerManualRun(persistedId, defaultInput)
-      setRunStatusMessage(`Run ${run.id.slice(0, 8)} (${run.status})`)
+      const run = await triggerManualRun(persistedId, defaultInput, true)
+      setRunStatusMessage(`Test run ${run.id.slice(0, 8)} (${run.status})`)
     } catch (error) {
       setRunStatusMessage(error instanceof Error ? error.message : 'Failed to start run')
     } finally {
       setIsRunningTest(false)
     }
   }, [persistedId, useDemoGraph])
+
+  const handlePublish = useCallback(async () => {
+    if (!persistedId || useDemoGraph) {
+      return
+    }
+    setIsPublishing(true)
+    setRunStatusMessage(null)
+    try {
+      const current = graphRef.current
+      await updateWorkflow(persistedId, {
+        graph: serializeWorkflowGraph(current.nodes, current.edges),
+      })
+      const published = await publishWorkflow(persistedId)
+      setWorkflowStatus(published.status)
+      setWorkflowVersion(published.version)
+      await queryClient.invalidateQueries({ queryKey: workflowQueryKeys.list })
+      setRunStatusMessage(`Published v${published.version}`)
+    } catch (error) {
+      setRunStatusMessage(error instanceof Error ? error.message : 'Failed to publish workflow')
+    } finally {
+      setIsPublishing(false)
+    }
+  }, [persistedId, queryClient, useDemoGraph])
 
   const handleSyncSchedule = useCallback(async () => {
     if (!persistedId || useDemoGraph) {
@@ -269,12 +312,20 @@ function WorkflowBuilderInner() {
     )
   }
 
+  const statusLabel =
+    useDemoGraph || workflowStatus === 'draft'
+      ? 'Draft, unpublished edits'
+      : workflowStatus === 'active'
+        ? `Published v${workflowVersion}`
+        : 'Archived'
+  const statusTone = !useDemoGraph && workflowStatus === 'active' ? 'published' : 'draft'
+
   return (
     <div className="absolute inset-0 flex flex-col overflow-hidden">
       <WorkflowBuilderHeader
         title={title}
-        statusLabel="Draft, unpublished edits"
-        statusTone="draft"
+        statusLabel={statusLabel}
+        statusTone={statusTone}
         savedLabel={savedLabel}
         titleEditable={Boolean(persistedId) && !useDemoGraph}
         onTitleChange={onRenameWorkflow}
@@ -282,6 +333,9 @@ function WorkflowBuilderInner() {
         isRunningTest={isRunningTest}
         runTestDisabled={!persistedId || useDemoGraph || !workflowHasTrigger(nodes)}
         runStatusMessage={runStatusMessage}
+        onPublish={persistedId && !useDemoGraph ? () => void handlePublish() : undefined}
+        isPublishing={isPublishing}
+        publishDisabled={!persistedId || useDemoGraph || !workflowHasTrigger(nodes)}
       />
       <div className="flex min-h-0 flex-1">
         <AddNodePanel hasTrigger={workflowHasTrigger(nodes)} onAddNode={onAddNode} />
@@ -302,6 +356,7 @@ function WorkflowBuilderInner() {
           nodes={nodes}
           edges={edges}
           onUpdateConfig={onUpdateNodeConfig}
+          onDeleteNode={onDeleteNode}
           onRunTest={persistedId && !useDemoGraph ? () => void handleRunTest() : undefined}
           isRunningTest={isRunningTest}
           onSyncSchedule={persistedId && !useDemoGraph ? () => void handleSyncSchedule() : undefined}

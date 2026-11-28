@@ -43,4 +43,27 @@ describe('WorkflowBuilderHeader', () => {
 
     expect(onTitleChange).toHaveBeenCalledWith('Lead scoring')
   })
+
+  it('calls onPublish and onRunTest when clicked', async () => {
+    const user = userEvent.setup()
+    const onPublish = vi.fn()
+    const onRunTest = vi.fn()
+
+    render(
+      <WorkflowBuilderHeader
+        title="Support triage"
+        statusLabel="Draft, unpublished edits"
+        statusTone="draft"
+        savedLabel="Saved just now"
+        onPublish={onPublish}
+        onRunTest={onRunTest}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Run test' }))
+    await user.click(screen.getByRole('button', { name: 'Publish' }))
+
+    expect(onRunTest).toHaveBeenCalledTimes(1)
+    expect(onPublish).toHaveBeenCalledTimes(1)
+  })
 })
