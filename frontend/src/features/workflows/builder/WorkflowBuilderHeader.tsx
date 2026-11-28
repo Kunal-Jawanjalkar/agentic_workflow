@@ -1,3 +1,4 @@
+import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { Check, Pencil, X } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
 
@@ -19,7 +20,8 @@ type WorkflowBuilderHeaderProps = {
   isRunningTest?: boolean
   runTestDisabled?: boolean
   runStatusMessage?: string | null
-  onPublish?: () => void
+  onPublish?: () => void | Promise<void>
+  onUnpublish?: () => void | Promise<void>
   isPublishing?: boolean
   publishDisabled?: boolean
 }
@@ -152,9 +154,23 @@ export function WorkflowBuilderHeader({
   runTestDisabled = false,
   runStatusMessage,
   onPublish,
+  onUnpublish,
   isPublishing = false,
   publishDisabled = false,
 }: WorkflowBuilderHeaderProps) {
+  const [confirmAction, setConfirmAction] = useState<'publish' | 'unpublish' | null>(null)
+  const isPublished = statusTone === 'published'
+  const actionDisabled = publishDisabled || isPublishing || (isPublished ? !onUnpublish : !onPublish)
+
+  const handleConfirm = async () => {
+    const action = confirmAction
+    setConfirmAction(null)
+    if (action === 'publish') {
+      await onPublish?.()
+    } else if (action === 'unpublish') {
+      await onUnpublish?.()
+    }
+  }
   return (
     <header
       className={cn(
@@ -199,12 +215,60 @@ export function WorkflowBuilderHeader({
         <Button
           type="button"
           size="sm"
-          disabled={publishDisabled || isPublishing}
-          onClick={onPublish}
+          variant={isPublished ? 'outline' : 'default'}
+          disabled={actionDisabled}
+          onClick={() => setConfirmAction(isPublished ? 'unpublish' : 'publish')}
         >
-          {isPublishing ? 'Publishing…' : 'Publish'}
+          {isPublishing
+            ? isPublished
+              ? 'Unpublishing…'
+              : 'Publishing…'
+            : isPublished
+              ? 'Unpublish'
+              : 'Publish'}
         </Button>
       </div>
+
+      <DialogPrimitive.Root
+        open={confirmAction !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmAction(null)
+          }
+        }}
+      >
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs" />
+          <DialogPrimitive.Popup className="fixed top-1/2 left-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-popover p-6 text-popover-foreground shadow-lg">
+            <DialogPrimitive.Title className="text-base font-semibold">
+              {confirmAction === 'unpublish' ? 'Unpublish workflow?' : 'Publish workflow?'}
+            </DialogPrimitive.Title>
+            <DialogPrimitive.Description className="mt-2 text-sm text-muted-foreground">
+              {confirmAction === 'unpublish'
+                ? 'This will disable the active trigger and stop live webhook or scheduled runs until you publish again.'
+                : 'This will save your latest changes and activate the workflow trigger for live runs.'}
+            </DialogPrimitive.Description>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmAction(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={confirmAction === 'unpublish' ? 'destructive' : 'default'}
+                onClick={() => void handleConfirm()}
+              >
+                {confirmAction === 'unpublish' ? 'Confirm unpublish' : 'Confirm publish'}
+              </Button>
+            </div>
+          </DialogPrimitive.Popup>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </header>
   )
 }

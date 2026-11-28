@@ -1,5 +1,9 @@
 import type { Edge, Node } from '@xyflow/react'
 
+import {
+  conditionEdgeFields,
+  isConditionOutput,
+} from '@/features/workflows/builder/append-workflow-step'
 import type { BuilderNodeData } from '@/features/workflows/builder/types'
 
 export type PersistedWorkflowGraph = {
@@ -33,6 +37,10 @@ export function serializeWorkflowGraph(
         targetHandle: edge.targetHandle,
         type: edge.type,
         label: edge.label,
+        labelStyle: edge.labelStyle,
+        labelBgStyle: edge.labelBgStyle,
+        labelBgPadding: edge.labelBgPadding,
+        labelBgBorderRadius: edge.labelBgBorderRadius,
         pathOptions: extra.pathOptions,
         style: edge.style,
         markerEnd: edge.markerEnd,
@@ -47,7 +55,21 @@ export function parseWorkflowGraph(graph: WorkflowGraphPayload): PersistedWorkfl
       ...node,
       type: node.type ?? 'workflow',
     })),
-    edges: graph.edges,
+    edges: graph.edges.map((edge) => {
+      if (!isConditionOutput(edge.sourceHandle)) {
+        return edge
+      }
+      const defaults = conditionEdgeFields(edge.sourceHandle)
+      return {
+        ...defaults,
+        ...edge,
+        label: edge.label ?? defaults.label,
+        labelStyle: edge.labelStyle ?? defaults.labelStyle,
+        labelBgStyle: edge.labelBgStyle ?? defaults.labelBgStyle,
+        labelBgPadding: edge.labelBgPadding ?? defaults.labelBgPadding,
+        labelBgBorderRadius: edge.labelBgBorderRadius ?? defaults.labelBgBorderRadius,
+      }
+    }),
   }
 }
 

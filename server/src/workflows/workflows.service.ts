@@ -252,4 +252,32 @@ export class WorkflowsService {
 
     return this.workflowResponse(published)
   }
+
+  async unpublishWorkflow(ownerId: string, workflowId: string) {
+    const existing = await this.prisma.workflow.findFirst({
+      where: { id: workflowId, owner_id: ownerId },
+    })
+    if (existing == null) {
+      throw new HttpDetailException(HttpStatus.NOT_FOUND, 'Workflow not found')
+    }
+
+    const unpublished = await this.prisma.$transaction(async (tx) => {
+      await tx.trigger.updateMany({
+        where: { workflow_id: existing.id },
+        data: { is_enabled: false },
+      })
+
+      return tx.workflow.update({
+        where: { id: existing.id },
+        data: {
+          status: 'draft',
+          updated_at: new Date(),
+        },
+      })
+    })
+
+    await this.workflowQueue.deleteSchedule(existing.id)
+
+    return this.workflowResponse(unpublished)
+  }
 }

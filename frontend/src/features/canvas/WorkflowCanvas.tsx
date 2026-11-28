@@ -13,6 +13,8 @@ import {
   type Node,
 } from '@xyflow/react'
 
+import { useTheme } from '@/providers/ThemeProvider'
+
 const initialNodes: Node[] = [
   {
     id: 'trigger-1',
@@ -32,6 +34,7 @@ const initialEdges: Edge[] = [
 ]
 
 function WorkflowCanvasInner() {
+  const { resolvedScheme } = useTheme()
   const [nodes, , onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
@@ -50,6 +53,7 @@ function WorkflowCanvasInner() {
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       fitView
+      colorMode={resolvedScheme}
       proOptions={{ hideAttribution: true }}
     >
       <Background gap={16} size={1} />

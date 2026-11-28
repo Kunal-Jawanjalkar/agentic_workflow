@@ -59,4 +59,13 @@ export class WorkflowsController {
   ) {
     return this.workflowsService.publishWorkflow(user.id, workflowId)
   }
+
+  @Post(':workflowId/unpublish')
+  @HttpCode(HttpStatus.OK)
+  unpublish(
+    @CurrentUser() user: UserPublicDto,
+    @Param('workflowId', ParseUUIDPipe) workflowId: string,
+  ) {
+    return this.workflowsService.unpublishWorkflow(user.id, workflowId)
+  }
 }

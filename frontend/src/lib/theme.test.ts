@@ -39,9 +39,11 @@ describe('theme', () => {
 
     applyColorSchemeToDocument('dark', root)
     expect(root.classList.contains('dark')).toBe(true)
+    expect(root.style.colorScheme).toBe('dark')
 
     applyColorSchemeToDocument('light', root)
     expect(root.classList.contains('dark')).toBe(false)
+    expect(root.style.colorScheme).toBe('light')
   })
 
   it('uses expected storage key', () => {

@@ -22,6 +22,7 @@ import {
   fetchWorkflow,
   isWorkflowUuid,
   publishWorkflow,
+  unpublishWorkflow,
   updateWorkflow,
   workflowQueryKeys,
 } from '@/features/workflows/api'
@@ -264,6 +265,25 @@ function WorkflowBuilderInner() {
     }
   }, [persistedId, queryClient, useDemoGraph])
 
+  const handleUnpublish = useCallback(async () => {
+    if (!persistedId || useDemoGraph) {
+      return
+    }
+    setIsPublishing(true)
+    setRunStatusMessage(null)
+    try {
+      const unpublished = await unpublishWorkflow(persistedId)
+      setWorkflowStatus(unpublished.status)
+      setWorkflowVersion(unpublished.version)
+      await queryClient.invalidateQueries({ queryKey: workflowQueryKeys.list })
+      setRunStatusMessage('Workflow unpublished (draft)')
+    } catch (error) {
+      setRunStatusMessage(error instanceof Error ? error.message : 'Failed to unpublish workflow')
+    } finally {
+      setIsPublishing(false)
+    }
+  }, [persistedId, queryClient, useDemoGraph])
+
   const handleSyncSchedule = useCallback(async () => {
     if (!persistedId || useDemoGraph) {
       return
@@ -334,6 +354,7 @@ function WorkflowBuilderInner() {
         runTestDisabled={!persistedId || useDemoGraph || !workflowHasTrigger(nodes)}
         runStatusMessage={runStatusMessage}
         onPublish={persistedId && !useDemoGraph ? () => void handlePublish() : undefined}
+        onUnpublish={persistedId && !useDemoGraph ? () => void handleUnpublish() : undefined}
         isPublishing={isPublishing}
         publishDisabled={!persistedId || useDemoGraph || !workflowHasTrigger(nodes)}
       />

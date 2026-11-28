@@ -44,26 +44,51 @@ describe('WorkflowBuilderHeader', () => {
     expect(onTitleChange).toHaveBeenCalledWith('Lead scoring')
   })
 
-  it('calls onPublish and onRunTest when clicked', async () => {
+  it('asks for confirmation before publishing and unpublishing', async () => {
     const user = userEvent.setup()
     const onPublish = vi.fn()
+    const onUnpublish = vi.fn()
     const onRunTest = vi.fn()
 
-    render(
+    const { rerender } = render(
       <WorkflowBuilderHeader
         title="Support triage"
         statusLabel="Draft, unpublished edits"
         statusTone="draft"
         savedLabel="Saved just now"
         onPublish={onPublish}
+        onUnpublish={onUnpublish}
         onRunTest={onRunTest}
       />,
     )
 
     await user.click(screen.getByRole('button', { name: 'Run test' }))
-    await user.click(screen.getByRole('button', { name: 'Publish' }))
-
     expect(onRunTest).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole('button', { name: 'Publish' }))
+    expect(onPublish).not.toHaveBeenCalled()
+    expect(screen.getByText('Publish workflow?')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Confirm publish' }))
     expect(onPublish).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <WorkflowBuilderHeader
+        title="Support triage"
+        statusLabel="Published v1"
+        statusTone="published"
+        savedLabel="Saved just now"
+        onPublish={onPublish}
+        onUnpublish={onUnpublish}
+        onRunTest={onRunTest}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Unpublish' }))
+    expect(onUnpublish).not.toHaveBeenCalled()
+    expect(screen.getByText('Unpublish workflow?')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Confirm unpublish' }))
+    expect(onUnpublish).toHaveBeenCalledTimes(1)
   })
 })

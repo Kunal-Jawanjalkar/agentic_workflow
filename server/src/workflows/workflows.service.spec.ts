@@ -14,6 +14,7 @@ describe('WorkflowsService', () => {
     trigger: {
       deleteMany: jest.fn(),
       create: jest.fn(),
+      updateMany: jest.fn(),
     },
     workflow: {
       update: jest.fn(),
@@ -185,5 +186,40 @@ describe('WorkflowsService', () => {
     await expect(service.publishWorkflow('user-1', 'wf-3')).rejects.toThrow(
       HttpDetailException,
     )
+  })
+
+  it('unpublishes an active workflow, disables triggers, and removes schedules', async () => {
+    prisma.workflow.findFirst.mockResolvedValue({
+      id: 'wf-1',
+      owner_id: 'user-1',
+      name: 'Webhook flow',
+      description: null,
+      status: 'active',
+      current_version_id: 'ver-1',
+      updated_at: new Date('2026-11-28T10:00:00.000Z'),
+    })
+    tx.workflow.update.mockResolvedValue({
+      id: 'wf-1',
+      name: 'Webhook flow',
+      description: null,
+      status: 'draft',
+      current_version_id: 'ver-1',
+      updated_at: new Date('2026-11-28T10:10:00.000Z'),
+    })
+    prisma.workflowVersion.findUnique.mockResolvedValue({
+      id: 'ver-1',
+      workflow_id: 'wf-1',
+      version: 1,
+      graph: { nodes: [], edges: [] },
+    })
+
+    const result = await service.unpublishWorkflow('user-1', 'wf-1')
+
+    expect(tx.trigger.updateMany).toHaveBeenCalledWith({
+      where: { workflow_id: 'wf-1' },
+      data: { is_enabled: false },
+    })
+    expect(workflowQueue.deleteSchedule).toHaveBeenCalledWith('wf-1')
+    expect(result.status).toBe('draft')
   })
 })

@@ -35,4 +35,5 @@ export function applyColorSchemeToDocument(
   root: HTMLElement = document.documentElement,
 ): void {
   root.classList.toggle('dark', scheme === 'dark')
+  root.style.colorScheme = scheme
 }

@@ -16,7 +16,11 @@ const ROW_GAP = 128
 const BRANCH_OFFSET_X = 240
 
 const conditionOutputs = ['yes', 'no'] as const
-type ConditionOutput = (typeof conditionOutputs)[number]
+export type ConditionOutput = (typeof conditionOutputs)[number]
+
+export function isConditionOutput(value: unknown): value is ConditionOutput {
+  return value === 'yes' || value === 'no'
+}
 
 type WorkflowStep = {
   id: string
@@ -52,7 +56,7 @@ function nextConditionOutput(edges: Edge[], conditionId: string): ConditionOutpu
   return conditionOutputs.find((output) => !used.has(output)) ?? null
 }
 
-function conditionEdgeFields(sourceHandle: ConditionOutput) {
+export function conditionEdgeFields(sourceHandle: ConditionOutput) {
   return {
     sourceHandle,
     label: sourceHandle,
